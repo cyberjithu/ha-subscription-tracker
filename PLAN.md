@@ -226,11 +226,15 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - [ ] Live deal search with a working AI key
 - **Gate:** tests green (97); flows verified in UI; committed.
 
-### C12 — Cost dashboard
-- [ ] Dashboard API: monthly total, by category, by owner, 12-month trend (price history + bills), upcoming 30 days
-- [ ] Dashboard UI with Recharts (stat tiles, category donut/bar, trend line, upcoming list)
-- [ ] Tests: aggregation math
-- **Gate:** tests green; dashboard renders with seed data.
+### C12 — Cost dashboard  ✅ done
+- [x] `services/dashboard.py`: monthly total, yearly total, active count, by category, by owner (Household + personal lists the viewer may see), 12-month trend, events in the next 30 days
+- [x] Trend per calendar month: usage bills prorated by the days in that month; fixed/contract prices from price history in effect at month end; nothing before the start date; medicines at their monthly estimate
+- [x] `GET /api/dashboard` (visibility rules as everywhere) + possible yearly savings from each subscription's latest successful deal search
+- [x] Dashboard UI with Recharts: 4 stat tiles, 12-month area line with crosshair tooltip, "coming up in 30 days", category bars with direct value labels, shared/personal split, "Show as table" for each chart, empty state; single series colour from the dataviz reference palette, stepped separately for dark
+- [x] Tests (4): month list, bill proration across months, price history + start date, totals/owner split/upcoming/cancelled excluded, API visibility + savings
+- [x] Fixes from click-through: upcoming badges pushed off the card, uncatalogued category names capitalised, chart animation off (charts were blank for the first seconds)
+- Note: the JS bundle is now ~310 KB gzipped (Recharts); fine on a LAN, code-splitting possible later
+- **Gate:** tests green (101); dashboard checked desktop light + dark, phone 375px, tooltip; committed.
 
 ### C13 — Lovelace card
 - [ ] `subtracker/card`: Lit card (Dockerfile already expects it: `docker build` fails until this lands) reading `sensor.subtracker_*` (upcoming list, monthly total, tap → panel), config editor

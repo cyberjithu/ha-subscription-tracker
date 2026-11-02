@@ -10,6 +10,7 @@ type Page = () => JSX.Element | null;
 import { AppLayout } from "@/components/app-layout";
 import { AdminOnly, Placeholder } from "@/components/placeholder";
 import { Catalog } from "@/pages/catalog";
+import { DashboardPage } from "@/pages/dashboard";
 import { Deals } from "@/pages/deals";
 import { Inbox } from "@/pages/inbox";
 import { Medicines } from "@/pages/medicines";
@@ -31,7 +32,7 @@ export type NavItem = {
 };
 
 export const NAV: NavItem[] = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboardIcon, chunk: "C12" },
+  { to: "/", label: "Dashboard", icon: LayoutDashboardIcon, chunk: "C12", page: DashboardPage },
   { to: "/subscriptions", label: "Subscriptions", icon: ReceiptTextIcon, chunk: "C7", page: SubscriptionsList },
   { to: "/medicines", label: "Medicines", icon: PillIcon, chunk: "C7", page: Medicines },
   { to: "/deals", label: "Deals", icon: TagIcon, chunk: "C11", page: Deals },

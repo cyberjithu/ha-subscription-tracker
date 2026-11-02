@@ -199,13 +199,17 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - Deviation: Ollama page-text helper moves to C11, where deal search needs it
 - **Gate:** tests green (77); test button works end to end; committed.
 
-### C10 — Provider discovery + suggestion queue
-- [ ] Discovery job (every `discovery_interval_days`, per country × category) + manual trigger
-- [ ] Dedupe vs catalog slugs and previously rejected
-- [ ] Suggestions API + UI (review, edit, accept → Provider, reject); admin only
-- [ ] Notification "N new providers suggested"
-- [ ] Tests: AI output never written to Provider until accept; rejected not re-suggested
-- **Gate:** tests green; manual discovery run for IE/broadband shows pending items.
+### C10 — Provider discovery + suggestion queue  ✅ done (live AI run pending AI credit, as C9)
+- [x] `services/discovery.py`: prompt with the country's known providers, web search when the backend has it, results validated by schema; manual trigger per category (sync) or all categories (background)
+- [x] Daily 03:00 job runs only for countries whose `last_discovery` (stored in country settings) is older than `discovery_interval_days`; 0 = off; add-on restarts don't reset the interval
+- [x] Dedupe: catalog slugs (incl. hidden) + every earlier suggestion (incl. rejected) + duplicates inside one answer; AI cannot move a provider to another category; medicine category never sent
+- [x] Suggestions API (admin): list by status, edit payload, accept → Provider `ai-accepted` (re-validated; 409 if already in catalog or already decided), reject (kept so never re-suggested), discover
+- [x] UI: Suggestions page (search now, pending/accepted/rejected, sources, edit dialog, accept/reject) + pending count badge in the nav for admins
+- [x] Notification "N new providers suggested" to admins only (push/inbox per their prefs; one shared HA bell entry)
+- [x] Tests (10): nothing reaches Provider before accept, known/duplicate/hidden/rejected skipped, http/javascript URLs dropped, one failing category doesn't stop the run, admins-only notification, interval logic, API roles/conflicts/errors
+- [x] Browser: real "Search now" shows OpenAI's 429 no-credit message; queue reviewed with suggestions produced by the real discovery code from a canned AI answer (accept → catalog with "AI suggested", reject → kept, badge clears)
+- [ ] Live discovery run for IE/broadband with a working AI key
+- **Gate:** tests green (86); review flow verified in UI; committed.
 
 ### C11 — Deal finder + bill prefill
 - [ ] Deal prompt builder respecting per-sub privacy toggles; prompt preview endpoint

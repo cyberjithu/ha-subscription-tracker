@@ -5,7 +5,10 @@ from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlmodel import Session
 
+from ..config import get_options
 from ..db import engine
+from .ai.providers import get_provider
+from .discovery import due_countries, run_discovery
 from .notify import flush_pending
 from .reminders import run_reminders
 from .sensors import push_sensors
@@ -32,6 +35,16 @@ async def flush_job() -> None:
         await flush_pending(session)
 
 
+async def discovery_job() -> None:
+    opts = get_options()
+    ai = get_provider(opts)
+    if ai is None:
+        return
+    with Session(engine) as session:
+        if codes := due_countries(session, opts.countries, opts.discovery_interval_days):
+            log.info("Provider discovery for %s: %s", codes, await run_discovery(session, ai, codes))
+
+
 def start() -> None:
     if scheduler.running:
         return
@@ -40,6 +53,8 @@ def start() -> None:
                       replace_existing=True)
     scheduler.add_job(sensors_job, "interval", minutes=10, id="sensors", next_run_time=datetime.now(),
                       replace_existing=True)
+    # daily check; the interval itself is tracked per country, so add-on restarts don't reset it
+    scheduler.add_job(discovery_job, "cron", hour=3, id="discovery", coalesce=True, replace_existing=True)
     scheduler.add_job(flush_job, "interval", minutes=5, id="flush", replace_existing=True)
     scheduler.start()
 

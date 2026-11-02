@@ -425,6 +425,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Suggestions */
+        get: operations["list_suggestions_api_suggestions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/suggestions/{sid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Edit Suggestion */
+        put: operations["edit_suggestion_api_suggestions__sid__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/suggestions/{sid}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept */
+        post: operations["accept_api_suggestions__sid__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/suggestions/{sid}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject */
+        post: operations["reject_api_suggestions__sid__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/suggestions/discover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Discover Now */
+        post: operations["discover_now_api_suggestions_discover_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me": {
         parameters: {
             query?: never;
@@ -656,6 +741,13 @@ export interface components {
          * @enum {string}
          */
         Cycle: "week" | "month" | "quarter" | "year" | "custom";
+        /** DiscoverIn */
+        DiscoverIn: {
+            /** Country */
+            country: string;
+            /** Category */
+            category?: string | null;
+        };
         /** Document */
         Document: {
             /** Id */
@@ -1047,6 +1139,44 @@ export interface components {
             /** Country */
             country: string;
         };
+        /** ProviderSuggestion */
+        ProviderSuggestion: {
+            /** Name */
+            name: string;
+            /** Category */
+            category: string;
+            /** Url */
+            url?: string | null;
+            /** Pricing Url */
+            pricing_url?: string | null;
+            /**
+             * Coverage
+             * @default
+             */
+            coverage: string;
+            /** Notice Days */
+            notice_days?: number | null;
+            /**
+             * Contract Lengths
+             * @default []
+             */
+            contract_lengths: number[];
+            /**
+             * Cancel Method
+             * @default
+             */
+            cancel_method: string;
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+            /**
+             * Source Urls
+             * @default []
+             */
+            source_urls: (string | null)[];
+        };
         /**
          * Role
          * @enum {string}
@@ -1342,6 +1472,42 @@ export interface components {
             notice_deadline: string | null;
             next_event: components["schemas"]["NextEvent"] | null;
         };
+        /** Suggestion */
+        Suggestion: {
+            /** Id */
+            id?: number | null;
+            /** Country */
+            country: string;
+            /** Category */
+            category: string;
+            /** Slug */
+            slug: string;
+            /** Payload */
+            payload?: {
+                [key: string]: unknown;
+            };
+            /** Source Urls */
+            source_urls?: unknown[];
+            /** @default pending */
+            status: components["schemas"]["SuggestionStatus"];
+            /**
+             * Ai Provider
+             * @default
+             */
+            ai_provider: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /** Decided By */
+            decided_by?: string | null;
+        };
+        /**
+         * SuggestionStatus
+         * @enum {string}
+         */
+        SuggestionStatus: "pending" | "accepted" | "rejected";
         /**
          * UserPrefs
          * @description Fields a user may edit on their own profile.
@@ -2451,6 +2617,169 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    list_suggestions_api_suggestions_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["SuggestionStatus"] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Suggestion"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_suggestion_api_suggestions__sid__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sid: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderSuggestion"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Suggestion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_api_suggestions__sid__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sid: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Provider"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_api_suggestions__sid__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sid: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Suggestion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discover_now_api_suggestions_discover_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiscoverIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

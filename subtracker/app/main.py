@@ -6,7 +6,7 @@ from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from sqlmodel import Session
 
-from .api import catalog as catalog_api, inbox, medicines, subscriptions, users
+from .api import catalog as catalog_api, inbox, medicines, subscriptions, suggestions, users
 from .config import APP_DIR
 from .db import engine
 from .services import catalog, jobs
@@ -40,6 +40,7 @@ api.include_router(subscriptions.router)
 api.include_router(inbox.router)
 api.include_router(medicines.router)
 api.include_router(catalog_api.router)
+api.include_router(suggestions.router)
 api.include_router(users.router)
 app.include_router(api)
 

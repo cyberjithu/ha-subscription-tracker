@@ -16,6 +16,7 @@ import { api, unwrap, useInbox, useMe } from "@/lib/api";
 import { setLocale } from "@/lib/format";
 import { watchTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+import { useSuggestions } from "@/pages/suggestions";
 import { NAV } from "@/router";
 
 const THEME_KEY = "subtracker.theme";
@@ -55,13 +56,14 @@ function useThemePref() {
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const me = useMe();
   const inbox = useInbox();
+  const pending = useSuggestions("pending", me.data?.role === "admin");
   const path = useRouterState({ select: (s) => s.location.pathname });
   const items = NAV.filter((n) => !n.adminOnly || me.data?.role === "admin");
   return (
     <nav className="flex flex-col gap-0.5" aria-label="Main">
       {items.map(({ to, label, icon: Icon }) => {
         const active = to === "/" ? path === "/" : path.startsWith(to);
-        const unread = to === "/inbox" ? inbox.data?.unread ?? 0 : 0;
+        const unread = to === "/inbox" ? inbox.data?.unread ?? 0 : to === "/suggestions" ? pending.data?.length ?? 0 : 0;
         return (
           <Link
             key={to}

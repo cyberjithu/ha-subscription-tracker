@@ -116,3 +116,26 @@ def test_delete_cascades(api):
              json={"period_start": "2026-01-01", "period_end": "2026-01-31", "amount": 5}, headers=ALICE)
     assert api.delete(f"/api/subscriptions/{s['id']}", headers=ALICE).status_code == 204
     assert api.get(f"/api/subscriptions/{s['id']}", headers=ALICE).status_code == 404
+
+
+def test_medicine_qty_change_resets_count_date(api):
+    from datetime import date
+    s = create(api, name="Statin", category="medicine", kind="refill", price=0)
+    url = f"/api/subscriptions/{s['id']}/medicine"
+    stale = {"qty_on_hand": 30, "daily_dose": 1, "qty_updated": "2026-01-01"}
+    assert api.put(url, json=stale, headers=ALICE).json()["qty_updated"] == date.today().isoformat()
+    same = api.put(url, json=stale | {"pharmacy": "Boots"}, headers=ALICE).json()
+    assert same["qty_updated"] == "2026-01-01"  # count unchanged: caller's date kept
+
+
+def test_input_validation(api):
+    for bad in ({"price": -1}, {"notice_days": -5}, {"reminder_days": ["soon"]}, {"reminder_days": [400]},
+                {"cycle": "custom", "cycle_days": 0}, {"name": ""}):
+        r = api.post("/api/subscriptions", json={"name": "X", "category": "c"} | bad, headers=ALICE)
+        assert r.status_code == 422, bad
+    s = create(api, kind="usage")
+    r = api.post(f"/api/subscriptions/{s['id']}/bills",
+                 json={"period_start": "2026-01-01", "period_end": "2026-01-31", "amount": -3}, headers=ALICE)
+    assert r.status_code == 422
+    m = create(api, name="Med", category="medicine", kind="refill", price=0)
+    assert api.put(f"/api/subscriptions/{m['id']}/medicine", json={"daily_dose": -1}, headers=ALICE).status_code == 422

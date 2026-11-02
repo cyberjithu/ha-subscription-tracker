@@ -45,9 +45,14 @@ def test_viewer_cannot_write(pclient: TestClient, session):
     assert pclient.post("/api/_test/write", headers=as_user("m")).status_code == 200
 
 
-def test_no_header_under_supervisor_rejected(pclient: TestClient, monkeypatch):
+def test_supervisor_requires_ingress_source(pclient: TestClient, monkeypatch):
     monkeypatch.setenv("SUPERVISOR_TOKEN", "x")
     assert pclient.get("/api/_test/me").status_code == 401
+    # spoofed headers from anything other than the Ingress proxy are rejected
+    assert pclient.get("/api/_test/me", headers=as_user("u1")).status_code == 401
+    ingress = TestClient(probe, client=("172.30.32.2", 50000))
+    assert ingress.get("/api/_test/me", headers=as_user("u1")).status_code == 200
+    assert ingress.get("/api/_test/me").status_code == 401
 
 
 def test_unknown_api_path_404(client: TestClient):

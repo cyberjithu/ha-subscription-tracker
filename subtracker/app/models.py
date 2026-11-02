@@ -2,7 +2,7 @@ from datetime import UTC, date, datetime
 from enum import StrEnum
 from typing import Annotated, Any
 
-from pydantic import StringConstraints
+from pydantic import Field as PField, StringConstraints
 
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
@@ -48,6 +48,10 @@ def Pattern(regex: str) -> Any:
     return Annotated[str, StringConstraints(pattern=regex)]
 
 
+NonNeg = Annotated[float, PField(ge=0)]
+DayCount = Annotated[int, PField(ge=0, le=3650)]
+ReminderDays = list[Annotated[int, PField(ge=0, le=365)]]
+
 HHMM = Pattern(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 
@@ -64,7 +68,7 @@ class UserPrefs(SQLModel):
     channels: dict = json_col({"push": True, "persistent": True, "inbox": True, "email": False})
     quiet_start: HHMM | None = None
     quiet_end: HHMM | None = None
-    reminder_days: list[int] | None = Field(default=None, sa_column=Column(JSON))
+    reminder_days: ReminderDays | None = Field(default=None, sa_column=Column(JSON))
     muted_categories: list[str] = json_col([])
 
 
@@ -81,20 +85,20 @@ class SubscriptionBase(SQLModel):
     country: str = "IE"
     provider_id: int | None = Field(default=None, foreign_key="provider.id")
     plan_name: str = ""
-    price: float = 0
+    price: NonNeg = 0
     currency: str = "EUR"
     cycle: Cycle = Cycle.month
-    cycle_days: int | None = None  # for Cycle.custom
+    cycle_days: Annotated[int, PField(ge=1, le=3650)] | None = None  # for Cycle.custom
     start_date: date | None = None
     next_renewal: date | None = None
     contract_end: date | None = None
     auto_renew: bool = True
-    notice_days: int | None = None
-    reminder_days: list = json_col([30, 14, 7, 1])
+    notice_days: DayCount | None = None
+    reminder_days: ReminderDays = json_col([30, 14, 7, 1])
     ai_enabled: bool = True
     ai_share_usage: bool = False
     ai_share_location: bool = False
-    annual_usage: float | None = None
+    annual_usage: NonNeg | None = None
     usage_unit: str = ""
     location: str = ""  # Eircode / county, only sent to AI when ai_share_location
     account_url: str = ""
@@ -118,8 +122,8 @@ class PriceChange(SQLModel, table=True):
 class BillBase(SQLModel):
     period_start: date
     period_end: date
-    amount: float
-    usage_value: float | None = None
+    amount: NonNeg
+    usage_value: NonNeg | None = None
     usage_unit: str = ""
 
 
@@ -129,14 +133,14 @@ class Bill(BillBase, table=True):
 
 
 class MedicineBase(SQLModel):
-    qty_on_hand: float = 0
+    qty_on_hand: NonNeg = 0
     qty_updated: date = Field(default_factory=date.today)
-    daily_dose: float = 1
-    pack_size: float = 0
-    refill_lead_days: int = 7
+    daily_dose: NonNeg = 1
+    pack_size: NonNeg = 0
+    refill_lead_days: DayCount = 7
     script_expiry: date | None = None
     pharmacy: str = ""
-    cost_per_fill: float = 0
+    cost_per_fill: NonNeg = 0
 
 
 class MedicineDetail(MedicineBase, table=True):

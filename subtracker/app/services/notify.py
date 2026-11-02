@@ -58,7 +58,7 @@ async def deliver(user: UserProfile, title: str, body: str, link: str, ha: HACli
 
 async def notify(session: Session, *, key: str, title: str, body: str, category: str = "",
                  owner_user_id: str | None = None, link: str = "", now: datetime | None = None,
-                 persistent_id: str = "", ha: HAClient = default_ha) -> bool:
+                 persistent_id: str = "", personal: bool = False, ha: HAClient = default_ha) -> bool:
     """Send once per dedupe key. Returns False when the key was already sent."""
     if session.exec(select(InboxItem).where(InboxItem.key == key)).first():
         return False
@@ -73,7 +73,8 @@ async def notify(session: Session, *, key: str, title: str, body: str, category:
             session.add(PendingDelivery(user_id=user.id, title=title, body=body, link=link, not_before=until))
         else:
             await deliver(user, title, body, link, ha)
-    if not users or any((u.channels or {}).get("persistent") for u in users):
+    # HA persistent notifications are visible to every HA user, so personal items never go there
+    if not personal and (not users or any((u.channels or {}).get("persistent") for u in users)):
         try:
             await ha.persistent(title, body, f"subtracker_{persistent_id or key}")  # same id replaces, no duplicates
         except Exception:

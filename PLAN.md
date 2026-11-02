@@ -71,7 +71,7 @@ ha-subscription-tracker/
 ## Core logic
 - `schedule.py` (pure): next renewal from cycle; **notice deadline = contract_end (or next_renewal) − notice_days**; refill run-out date = today + qty/daily_dose; script expiry; usage-bill normalized monthly cost. Monthly-equivalent cost for dashboard.
 - Daily job: for each active sub compute upcoming events (notice deadline, renewal, run-out, script expiry), fire reminders on matching `reminder_days`, dedupe via InboxItem key.
-- Sensor job (every 10 min + startup, since API-set states vanish on HA restart): `sensor.subtracker_<slug>` (state = days to next deadline, attrs: price, renewal, notice_deadline, owner), `sensor.subtracker_monthly_total`, `sensor.subtracker_next_deadline`.
+- Sensor job (every 10 min + startup, since API-set states vanish on HA restart): `sensor.subtracker_<id>` (state = days to next deadline, attrs: price, renewal, notice_deadline, owner), `sensor.subtracker_monthly_total`, `sensor.subtracker_next_deadline`.
 - Notifications: shared → all users with matching prefs; personal → owner only. Each user's channels, quiet hours (delay, not drop) and muted categories respected. Mobile push uses `uri` action opening the Ingress page (no websocket listener in v1). Email via Resend if key set, else HA `email_notify_service`.
 - Lovelace card: Lit card reads `sensor.subtracker_*` from `hass` (no add-on API calls): upcoming deadlines list, monthly total, tap opens panel. Add-on copies `subtracker-card.js` to `/config/www/` on start (`homeassistant_config:rw` map); DOCS explain adding `/local/subtracker-card.js` resource.
 - Visibility: Ingress headers give HA user; views show shared + own personal. "Add to my list" creates personal item; "Make shared" toggles owner to null.
@@ -128,7 +128,7 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - **Gate:** tests green; dry-run job logs expected HA calls for seeded data.
 
 ### C4 — HA sensors  ✅ done
-- [x] Sensor job (startup + every 10 min): `sensor.subtracker_<slug>`, `sensor.subtracker_monthly_total`, `sensor.subtracker_next_deadline` (with `upcoming` list for the card); stale states deleted
+- [x] Sensor job (startup + every 10 min): `sensor.subtracker_<id>`, `sensor.subtracker_monthly_total`, `sensor.subtracker_next_deadline` (with `upcoming` list for the card); stale states deleted
 - [x] Tests with FakeHA: entity ids, state, attributes
 - **Gate:** tests green.
 
@@ -138,6 +138,18 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - [x] `/api/settings` (admin: read effective options, AI provider status — no secrets returned)
 - [x] Tests: member cannot change roles; secrets never in response
 - **Gate:** tests green.
+
+### C5.1 — Backend review fixes  ✅ done
+- [x] 1. Personal item never reaches other users when owner profile is missing
+- [x] 2. Personal items never sent to HA persistent notifications (visible to all HA users)
+- [x] 3. Notice deadline for recurring subs computed from rolled-forward renewal
+- [x] 4. Refill already inside lead window still reminds (clamped to today)
+- [x] 5. Medicine `qty_updated` reset when `qty_on_hand` changes
+- [x] 6. Stable sensor entity ids (`sensor.subtracker_<id>`); no clash with summary sensors; personal items get no named sensor (cost still in total)
+- [x] 7. Under Supervisor, accept identity headers only from Ingress proxy `172.30.32.2`
+- [x] 8. Expired contracts keep reminding ("contract ended — update or cancel")
+- [x] 9. Input validation: price ≥ 0, notice_days ≥ 0, reminder_days ints 0–365, cycle_days ≥ 1
+- **Gate:** each fix has a test; full suite green; committed.
 
 ### C6 — Frontend shell
 - [ ] `subtracker/frontend`: Vite + React + TS + Tailwind + shadcn/ui, TanStack Router + Query

@@ -112,3 +112,32 @@ async def test_user_reminder_override_and_personal(session, fake_ha):
     session.commit()
     assert await run_reminders(session, today=date(2026, 11, 2), ha=fake_ha) == 1
     assert session.exec(select(InboxItem.user_id)).all() == ["o"]
+
+
+async def test_personal_with_missing_owner_never_reaches_others(session, fake_ha):
+    session.add(UserProfile(id="bob", push_service="notify.mobile_app_bob"))
+    session.add(Subscription(name="Antidepressant", category="medicine", owner_user_id="alice",
+                             next_renewal=date(2026, 11, 9)))
+    session.commit()
+    await run_reminders(session, today=date(2026, 11, 2), ha=fake_ha)
+    assert fake_ha.of("notify") == []
+    assert session.exec(select(InboxItem.user_id)).all() == ["alice"]
+
+
+async def test_personal_never_sent_to_persistent(session, fake_ha):
+    session.add(UserProfile(id="alice", push_service="notify.mobile_app_alice"))
+    session.add(Subscription(name="Therapy", category="health", owner_user_id="alice", next_renewal=date(2026, 11, 9)))
+    session.add(Subscription(name="Bins", category="bins", next_renewal=date(2026, 11, 9)))
+    session.commit()
+    await run_reminders(session, today=date(2026, 11, 2), ha=fake_ha)
+    assert [c[2] for c in fake_ha.of("persistent")] == ["Bins renews"]
+    assert sorted(c[2] for c in fake_ha.of("notify")) == ["Bins renews", "Therapy renews"]
+
+
+async def test_expired_contract_reminds_on_nag_day(session, fake_ha):
+    session.add(UserProfile(id="a", push_service="notify.mobile_app_a"))
+    session.add(Subscription(name="Energia", category="electricity", kind=Kind.contract, contract_end=date(2026, 10, 26)))
+    session.commit()
+    assert await run_reminders(session, today=date(2026, 11, 1), ha=fake_ha) == 0
+    assert await run_reminders(session, today=date(2026, 11, 2), ha=fake_ha) == 1
+    assert "contract ended" in fake_ha.of("notify")[0][2]

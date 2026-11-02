@@ -1,11 +1,10 @@
 """Mirror subscriptions into Home Assistant as sensor states (REST-set states vanish on HA restart, so re-push often)."""
-import re
 from collections import Counter, defaultdict
 from datetime import date
 
 from sqlmodel import Session, select
 
-from ..models import Bill, Kind, MedicineDetail, SubStatus, Subscription, UserProfile
+from ..models import Bill, Kind, MedicineDetail, SubStatus, Subscription
 from . import schedule
 from .ha import HAClient, ha as default_ha
 
@@ -13,13 +12,8 @@ from .ha import HAClient, ha as default_ha
 _pushed: set[str] = set()  # entity ids pushed last run, so removed subscriptions get cleared
 
 
-def slugify(text: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_") or "item"
-
-
 async def push_sensors(session: Session, today: date | None = None, ha: HAClient = default_ha) -> dict[str, tuple]:
     today = today or date.today()
-    names = {u.id: u.display_name for u in session.exec(select(UserProfile))}
     subs = session.exec(select(Subscription).where(Subscription.status != SubStatus.cancelled)
                         .order_by(Subscription.id)).all()
     states: dict[str, tuple] = {}
@@ -32,19 +26,18 @@ async def push_sensors(session: Session, today: date | None = None, ha: HAClient
         monthly = round(schedule.monthly_cost(sub, bills, med), 2)
         totals[sub.category] += monthly
         currencies[sub.currency] += 1
+        if sub.owner_user_id:  # HA states are visible to every HA user: personal items count in totals, unnamed
+            continue
         events = [e for e in schedule.upcoming_events(sub, med, today) if e.date >= today]
         upcoming += [(e, sub) for e in events]
         ev = events[0] if events else None
-        entity = f"sensor.subtracker_{slugify(sub.name)}"
-        if entity in states:
-            entity = f"{entity}_{sub.id}"
+        entity = f"sensor.subtracker_{sub.id}"  # id-based: survives renames and duplicate names
         states[entity] = (ev.days_from(today) if ev else "unknown", {
             "friendly_name": sub.name, "icon": "mdi:calendar-sync", "unit_of_measurement": "d",
             "subscription_id": sub.id, "category": sub.category, "kind": sub.kind.value, "status": sub.status.value,
-            "owner": names.get(sub.owner_user_id, sub.owner_user_id) if sub.owner_user_id else "shared",
             "price": sub.price, "currency": sub.currency, "monthly_cost": monthly,
             "next_event": ev.kind if ev else None, "next_event_date": ev.date.isoformat() if ev else None,
-            "notice_deadline": d.isoformat() if (d := schedule.notice_deadline(sub)) else None,
+            "notice_deadline": d.isoformat() if (d := schedule.notice_deadline(sub, today)) else None,
             "contract_end": sub.contract_end.isoformat() if sub.contract_end else None,
         })
     currency = currencies.most_common(1)[0][0] if currencies else "EUR"

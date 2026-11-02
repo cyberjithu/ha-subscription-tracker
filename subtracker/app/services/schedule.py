@@ -36,18 +36,17 @@ def roll_forward(renewal: date, cycle: Cycle, cycle_days: int | None, today: dat
     return d
 
 
-def term_end(sub: Subscription) -> date | None:
-    """Date the current commitment ends: contract end for contracts, else next renewal."""
-    if sub.kind == Kind.contract and sub.contract_end:
-        return sub.contract_end
-    return sub.next_renewal
-
-
-def notice_deadline(sub: Subscription) -> date | None:
-    end = term_end(sub)
-    if end is None or not sub.notice_days:
+def notice_deadline(sub: Subscription, today: date) -> date | None:
+    """Last day to cancel. Contracts: contract end minus notice. Recurring: the next renewal whose deadline
+    has not passed yet (once this cycle's deadline is gone, the next cycle's one is what matters)."""
+    if not sub.notice_days:
         return None
-    return end - timedelta(days=sub.notice_days)
+    gap = timedelta(days=sub.notice_days)
+    if sub.kind == Kind.contract and sub.contract_end:
+        return sub.contract_end - gap
+    if sub.next_renewal:
+        return roll_forward(sub.next_renewal, sub.cycle, sub.cycle_days, today + gap) - gap
+    return None
 
 
 def medicine_remaining(med: MedicineDetail, today: date) -> float:
@@ -83,7 +82,7 @@ def monthly_cost(sub: Subscription, bills: list[Bill] = (), med: MedicineDetail 
 
 @dataclass
 class Event:
-    kind: str  # notice_deadline | renewal | contract_end | refill | script_expiry
+    kind: str  # notice_deadline | renewal | contract_end | contract_expired | refill | script_expiry
     date: date
     subscription_id: int
     title: str
@@ -97,14 +96,21 @@ def upcoming_events(sub: Subscription, med: MedicineDetail | None, today: date) 
     events: list[Event] = []
     if sub.kind == Kind.refill and med:
         if out := run_out_date(med, today):
-            events.append(Event("refill", out - timedelta(days=med.refill_lead_days), sid, f"Refill {sub.name}"))
+            # already inside the lead window: remind today (and every day) until the stock is updated
+            refill = max(out - timedelta(days=med.refill_lead_days), today)
+            events.append(Event("refill", refill, sid, f"Refill {sub.name}"))
         if med.script_expiry:
             events.append(Event("script_expiry", med.script_expiry, sid, f"Prescription for {sub.name} expires"))
     else:
-        if nd := notice_deadline(sub):
+        if nd := notice_deadline(sub, today):
             events.append(Event("notice_deadline", nd, sid, f"Last day to give notice for {sub.name}"))
         if sub.kind == Kind.contract and sub.contract_end:
-            events.append(Event("contract_end", sub.contract_end, sid, f"{sub.name} contract ends"))
+            if sub.contract_end >= today:
+                events.append(Event("contract_end", sub.contract_end, sid, f"{sub.name} contract ends"))
+            else:  # ended but not updated: nag weekly, counted from the end date
+                nag = today + timedelta(days=-(today - sub.contract_end).days % 7)
+                events.append(Event("contract_expired", nag, sid,
+                                    f"{sub.name} contract ended - update the end date or mark it cancelled"))
         if sub.next_renewal and sub.kind != Kind.contract:
             events.append(Event("renewal", roll_forward(sub.next_renewal, sub.cycle, sub.cycle_days, today), sid, f"{sub.name} renews"))
     return sorted(events, key=lambda e: e.date)

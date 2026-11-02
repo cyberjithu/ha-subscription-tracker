@@ -62,7 +62,7 @@ def to_out(session: Session, sub: Subscription, today: date | None = None) -> Su
     return SubscriptionOut(
         **sub.model_dump(),
         monthly_cost=round(schedule.monthly_cost(sub, bills, med), 2),
-        notice_deadline=schedule.notice_deadline(sub),
+        notice_deadline=schedule.notice_deadline(sub, today),
         next_event=NextEvent(kind=ev.kind, date=ev.date, days=ev.days_from(today)) if ev else None,
     )
 
@@ -202,6 +202,8 @@ def get_medicine(sub_id: int, user: UserProfile = Depends(current_user), session
 def put_medicine(sub_id: int, body: MedicineBase, user: UserProfile = Depends(writer),
                  session: Session = Depends(get_session)):
     med = _medicine(session, sub_id, user)
+    if body.qty_on_hand != med.qty_on_hand:
+        body.qty_updated = date.today()  # the count is "as of now"; a stale echo would skew the run-out date
     med.sqlmodel_update(body.model_dump())
     session.add(med)
     session.commit()

@@ -24,11 +24,21 @@ def test_roll_forward_keeps_anchor_day():
 
 
 def test_notice_deadline():
+    t = date(2026, 11, 1)
     c = sub(kind=Kind.contract, contract_end=date(2027, 3, 1), notice_days=30)
-    assert s.notice_deadline(c) == date(2027, 1, 30)
-    assert s.notice_deadline(sub(kind=Kind.contract, contract_end=date(2027, 3, 1))) is None
+    assert s.notice_deadline(c, t) == date(2027, 1, 30)
+    assert s.notice_deadline(sub(kind=Kind.contract, contract_end=date(2027, 3, 1)), t) is None
     f = sub(kind=Kind.fixed, next_renewal=date(2026, 12, 1), notice_days=1)
-    assert s.notice_deadline(f) == date(2026, 11, 30)
+    assert s.notice_deadline(f, t) == date(2026, 11, 30)
+
+
+def test_notice_deadline_rolls_with_recurring_renewal():
+    # anchor long past: deadline follows the next renewal, not the stale stored one
+    f = sub(next_renewal=date(2026, 1, 15), notice_days=5)
+    assert s.notice_deadline(f, date(2026, 11, 2)) == date(2026, 11, 10)
+    # this cycle's deadline already passed (renewal in 3 days): next cycle's deadline
+    assert s.notice_deadline(f, date(2026, 11, 12)) == date(2026, 12, 10)
+    assert s.next_event(f, None, date(2026, 11, 2)).kind == "notice_deadline"
 
 
 def test_refill_run_out():
@@ -58,3 +68,16 @@ def test_events_order_and_kinds():
     evs = s.upcoming_events(sub(kind=Kind.refill), med, date(2026, 11, 1))
     assert [(e.kind, e.date) for e in evs] == [("refill", date(2026, 11, 8)), ("script_expiry", date(2027, 1, 1))]
     assert s.next_event(sub(kind=Kind.fixed), None, date(2026, 1, 1)) is None
+
+
+def test_refill_inside_lead_window_reminds_today():
+    med = MedicineDetail(subscription_id=1, qty_on_hand=3, daily_dose=1, refill_lead_days=7, qty_updated=date(2026, 11, 2))
+    ev = s.next_event(sub(kind=Kind.refill), med, date(2026, 11, 2))
+    assert (ev.kind, ev.date) == ("refill", date(2026, 11, 2))
+
+
+def test_expired_contract_nags_weekly():
+    c = sub(kind=Kind.contract, contract_end=date(2026, 10, 20), notice_days=30)
+    assert s.next_event(c, None, date(2026, 10, 27)).date == date(2026, 10, 27)  # 7 days after: today
+    ev = s.next_event(c, None, date(2026, 10, 28))
+    assert (ev.kind, ev.date) == ("contract_expired", date(2026, 11, 3))

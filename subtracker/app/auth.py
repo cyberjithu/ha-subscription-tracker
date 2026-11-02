@@ -7,12 +7,16 @@ from sqlmodel import Session, select
 from .db import get_session
 from .models import Role, UserProfile
 
+INGRESS_PROXY = "172.30.32.2"  # fixed Supervisor Ingress address
+
 
 def current_user(request: Request, session: Session = Depends(get_session)) -> UserProfile:
     uid = request.headers.get("X-Remote-User-Id")
-    if not uid:
-        if os.environ.get("SUPERVISOR_TOKEN"):  # running as add-on: only Ingress traffic is trusted
+    if os.environ.get("SUPERVISOR_TOKEN"):
+        # running as add-on: identity headers are only trustworthy when the Ingress proxy sent them
+        if not uid or not request.client or request.client.host != INGRESS_PROXY:
             raise HTTPException(401, "Open SubTracker from the Home Assistant sidebar")
+    elif not uid:
         uid = os.environ.get("SUBTRACKER_DEV_USER", "dev")
     user = session.get(UserProfile, uid)
     if user is None:

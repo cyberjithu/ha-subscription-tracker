@@ -24,16 +24,16 @@ async def test_sensor_payloads(session, fake_ha):
     session.commit()
     await push_sensors(session, TODAY, ha=fake_ha)
     st = states(fake_ha)
-    assert set(st) == {"sensor.subtracker_netflix", "sensor.subtracker_netflix_2", "sensor.subtracker_eir_fibre",
+    assert set(st) == {"sensor.subtracker_1", "sensor.subtracker_3",
                        "sensor.subtracker_monthly_total", "sensor.subtracker_next_deadline"}
-    state, attrs = st["sensor.subtracker_eir_fibre"]
+    assert st["sensor.subtracker_1"][1]["friendly_name"] == "Netflix"
+    state, attrs = st["sensor.subtracker_3"]
     assert state == 39 and attrs["next_event"] == "notice_deadline" and attrs["notice_deadline"] == "2026-12-11"
-    assert st["sensor.subtracker_netflix_2"][1]["owner"] == "Alice"
     total, tattrs = st["sensor.subtracker_monthly_total"]
     assert total == 84 and tattrs["by_category"] == {"streaming": 24, "broadband": 60} and tattrs["unit_of_measurement"] == "EUR"
     nd, nattrs = st["sensor.subtracker_next_deadline"]
     assert nd == "2026-11-09" and nattrs["subscription"] == "Netflix" and nattrs["days"] == 7
-    assert [u["name"] for u in nattrs["upcoming"]][:2] == ["Netflix", "Netflix"]
+    assert [u["name"] for u in nattrs["upcoming"]] == ["Netflix", "eir Fibre", "eir Fibre"]  # personal one absent
 
 
 async def test_removed_subscription_state_deleted(session, fake_ha):
@@ -42,7 +42,8 @@ async def test_removed_subscription_state_deleted(session, fake_ha):
     session.add(sub)
     session.commit()
     await push_sensors(session, TODAY, ha=fake_ha)
+    sub_id = sub.id
     session.delete(sub)
     session.commit()
     await push_sensors(session, TODAY, ha=fake_ha)
-    assert fake_ha.of("delete") == [("delete", "sensor.subtracker_disney")]
+    assert fake_ha.of("delete") == [("delete", f"sensor.subtracker_{sub_id}")]

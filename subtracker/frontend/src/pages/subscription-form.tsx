@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { type SubIn, api, unwrap, useSubscription, useSubscriptions } from "@/lib/api";
+import { type Provider, type SubIn, api, unwrap, useProviders, useSubscription, useSubscriptions } from "@/lib/api";
 import { CYCLE_LABEL, KIND_LABEL, errorText } from "@/lib/format";
 
 const BLANK: SubIn = {
@@ -91,6 +91,17 @@ function SubscriptionForm({ id, initial }: { id?: number; initial: SubIn }) {
             <Input id="category" required list="categories" value={f.category} onChange={(e) => set("category", e.target.value.toLowerCase())} placeholder="broadband" />
             <datalist id="categories">{categories.map((c) => <option key={c} value={c} />)}</datalist>
           </Field>
+          <ProviderPicker category={f.category} country={f.country} value={f.provider_id ?? null}
+            onPick={(p) => setF((prev) => {
+              const notice = (p?.switching as { notice_days?: number | null } | undefined)?.notice_days;
+              return {
+                ...prev,
+                provider_id: p?.id ?? null,
+                name: prev.name || p?.name || "",
+                account_url: prev.account_url || p?.url || "",
+                notice_days: prev.notice_days ?? (notice || null),
+              };
+            })} />
           <Field label="How is it billed?">
             <Select value={k} onValueChange={(v) => set("kind", v as SubIn["kind"])}>
               <SelectTrigger aria-label="Billing type" className="w-full"><SelectValue /></SelectTrigger>
@@ -228,5 +239,26 @@ function Section({ title, description, children }: { title: string; description?
       </CardHeader>
       <CardContent className="grid gap-4 sm:grid-cols-2">{children}</CardContent>
     </Card>
+  );
+}
+
+const NONE = "none";
+
+function ProviderPicker({ category, country, value, onPick }: {
+  category: string; country: string; value: number | null; onPick: (p: Provider | null) => void;
+}) {
+  const providers = useProviders({ country, category: category || undefined });
+  const list = category ? providers.data ?? [] : [];
+  return (
+    <Field label="Provider" hint={category && !list.length ? "No catalog providers for this category yet." : "Fills in the name, account link and notice period."}>
+      <Select value={value ? String(value) : NONE} disabled={!list.length}
+        onValueChange={(v) => onPick(list.find((p) => String(p.id) === v) ?? null)}>
+        <SelectTrigger aria-label="Provider" className="w-full"><SelectValue placeholder="Pick a category first" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NONE}>Other / not listed</SelectItem>
+          {list.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </Field>
   );
 }

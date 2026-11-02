@@ -4,10 +4,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.responses import FileResponse
+from sqlmodel import Session
 
-from .api import inbox, medicines, subscriptions, users
+from .api import catalog as catalog_api, inbox, medicines, subscriptions, users
 from .config import APP_DIR
-from .services import jobs
+from .db import engine
+from .services import catalog, jobs
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 STATIC_DIR = APP_DIR / "static"
@@ -15,8 +17,10 @@ STATIC_DIR = APP_DIR / "static"
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    run_jobs = not os.environ.get("SUBTRACKER_NO_JOBS")  # tests drive jobs directly
+    run_jobs = not os.environ.get("SUBTRACKER_NO_JOBS")  # tests drive startup work (jobs, catalog) directly
     if run_jobs:
+        with Session(engine) as session:
+            catalog.load_bundled(session)
         jobs.start()
     yield
     if run_jobs:
@@ -35,6 +39,7 @@ def health() -> dict:
 api.include_router(subscriptions.router)
 api.include_router(inbox.router)
 api.include_router(medicines.router)
+api.include_router(catalog_api.router)
 api.include_router(users.router)
 app.include_router(api)
 

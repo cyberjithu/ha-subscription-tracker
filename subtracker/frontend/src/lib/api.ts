@@ -58,3 +58,19 @@ export const useUsers = () =>
 
 /** Absolute URL for links the browser follows itself (downloads), under the Ingress prefix. */
 export const apiUrl = (path: string) => `${baseUrl}${path}`;
+
+export type Provider = Schemas["Provider"];
+
+export const useProviders = (opts: { country?: string; category?: string; includeHidden?: boolean } = {}) =>
+  useQuery({
+    queryKey: ["catalog", "providers", opts],
+    queryFn: async () => unwrap(await api.GET("/api/catalog/providers", {
+      params: { query: { country: opts.country, category: opts.category, include_hidden: opts.includeHidden } },
+    })),
+  });
+
+export const useCategories = () =>
+  useQuery({ queryKey: ["catalog", "categories"], queryFn: async () => unwrap(await api.GET("/api/catalog/categories")) });
+
+export const useCountries = () =>
+  useQuery({ queryKey: ["catalog", "countries"], queryFn: async () => unwrap(await api.GET("/api/catalog/countries")) });

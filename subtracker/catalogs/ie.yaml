@@ -1,0 +1,120 @@
+# Ireland provider catalog, bundled with the add-on.
+# Loaded on every start: new providers are added and unedited bundled ones are refreshed.
+# Anything you edit, add or hide in the app is kept as you left it.
+#
+# Switching info is general guidance, not your contract: always check your own terms.
+# Plans/prices are left empty on purpose; they go stale fast and are refreshed by the AI deal finder.
+captured_at: 2026-11-02
+
+country:
+  code: IE
+  name: Ireland
+  currency: EUR
+  settings:
+    dps_monthly_cap: 80 # Drug Payment Scheme: max household spend on prescriptions per calendar month (EUR)
+    dps_url: https://www.mydps.ie/
+    switch_sites:
+      - name: bonkers.ie
+        url: https://www.bonkers.ie/
+      - name: switcher.ie
+        url: https://www.switcher.ie/
+    regulators:
+      telecoms: { name: ComReg, url: https://www.comreg.ie/ }
+      energy: { name: CRU, url: https://www.cru.ie/ }
+
+categories:
+  - { slug: broadband, name: Broadband, icon: mdi:router-wireless }
+  - { slug: mobile, name: Mobile, icon: mdi:cellphone }
+  - { slug: electricity, name: Electricity, icon: mdi:flash }
+  - { slug: gas, name: Gas, icon: mdi:fire }
+  - { slug: bins, name: Bins, icon: mdi:trash-can }
+  - { slug: streaming, name: Streaming & TV, icon: mdi:television-play }
+  - { slug: software, name: Software & AI, icon: mdi:application-cog }
+  - { slug: medicine, name: Medicines, icon: mdi:pill, ai_deals: false }
+
+# Reused switching blocks
+x-broadband: &broadband
+  contract_lengths: [12, 18, 24]
+  notice_days: 30
+  cancel_method: Contact the provider; at the end of the minimum term you can leave without a penalty.
+  switch_site: https://www.bonkers.ie/compare-broadband-deals/
+  regulator: https://www.comreg.ie/
+x-mobile: &mobile
+  contract_lengths: [0, 12, 24]
+  notice_days: 30
+  cancel_method: Prepay can stop any time. Bill pay - contact the provider; porting your number to a new network ends the old contract.
+  switch_site: https://www.bonkers.ie/compare-mobile-phones/
+  regulator: https://www.comreg.ie/
+x-energy: &energy
+  contract_lengths: [12]
+  notice_days: 0
+  cancel_method: Sign up with the new supplier; they arrange the switch. Leaving a fixed contract early may cost an exit fee.
+  switch_site: https://www.bonkers.ie/compare-gas-electricity-prices/
+  regulator: https://www.cru.ie/
+x-bins: &bins
+  contract_lengths: [12]
+  notice_days: 30
+  cancel_method: Contact the provider. Collectors are permitted per county, so check who serves your area.
+x-anytime: &anytime
+  contract_lengths: [0]
+  notice_days: 0
+  cancel_method: Cancel in your account settings any time; access usually runs to the end of the paid period.
+
+providers:
+  # Broadband
+  - { slug: eir, name: eir, category: broadband, url: https://www.eir.ie/, pricing_url: https://www.eir.ie/shop/broadband, switching: *broadband }
+  - { slug: virgin-media, name: Virgin Media, category: broadband, url: https://www.virginmedia.ie/, pricing_url: https://www.virginmedia.ie/broadband/, switching: *broadband, coverage: Cable network in towns and cities; check your address. }
+  - { slug: vodafone, name: Vodafone, category: broadband, url: https://www.vodafone.ie/, pricing_url: https://www.vodafone.ie/broadband, switching: *broadband }
+  - { slug: sky, name: Sky, category: broadband, url: https://www.sky.com/ie, pricing_url: https://www.sky.com/ie/broadband, switching: *broadband }
+  - { slug: pure-telecom, name: Pure Telecom, category: broadband, url: https://www.puretelecom.ie/, pricing_url: https://www.puretelecom.ie/, switching: *broadband }
+  - { slug: digiweb, name: Digiweb, category: broadband, url: https://digiweb.ie/, pricing_url: https://digiweb.ie/, switching: *broadband }
+  - { slug: three, name: Three, category: broadband, url: https://www.three.ie/, pricing_url: https://www.three.ie/broadband/, switching: *broadband, coverage: Mostly 4G/5G home broadband. }
+
+  # Mobile
+  - { slug: three, name: Three, category: mobile, url: https://www.three.ie/, pricing_url: https://www.three.ie/, switching: *mobile }
+  - { slug: vodafone, name: Vodafone, category: mobile, url: https://www.vodafone.ie/, pricing_url: https://www.vodafone.ie/, switching: *mobile }
+  - { slug: eir, name: eir, category: mobile, url: https://www.eir.ie/, pricing_url: https://www.eir.ie/mobile/, switching: *mobile }
+  - { slug: tesco-mobile, name: Tesco Mobile, category: mobile, url: https://www.tescomobile.ie/, pricing_url: https://www.tescomobile.ie/, switching: *mobile }
+  - { slug: "48", name: "48", category: mobile, url: https://www.48.ie/, pricing_url: https://www.48.ie/, switching: *mobile }
+  - { slug: gomo, name: GoMo, category: mobile, url: https://gomo.ie/, pricing_url: https://gomo.ie/, switching: *mobile }
+  - { slug: lyca-mobile, name: Lyca Mobile, category: mobile, url: https://www.lycamobile.ie/, pricing_url: https://www.lycamobile.ie/en/, switching: *mobile }
+
+  # Electricity
+  - { slug: electric-ireland, name: Electric Ireland, category: electricity, url: https://www.electricireland.ie/, pricing_url: https://www.electricireland.ie/, switching: *energy }
+  - { slug: bord-gais-energy, name: Bord Gáis Energy, category: electricity, url: https://www.bordgaisenergy.ie/, pricing_url: https://www.bordgaisenergy.ie/, switching: *energy }
+  - { slug: sse-airtricity, name: SSE Airtricity, category: electricity, url: https://www.sseairtricity.com/ie/home, pricing_url: https://www.sseairtricity.com/ie/home, switching: *energy }
+  - { slug: energia, name: Energia, category: electricity, url: https://www.energia.ie/, pricing_url: https://www.energia.ie/, switching: *energy }
+  - { slug: flogas, name: Flogas, category: electricity, url: https://www.flogas.ie/, pricing_url: https://www.flogas.ie/, switching: *energy }
+  - { slug: pinergy, name: Pinergy, category: electricity, url: https://pinergy.ie/, pricing_url: https://pinergy.ie/, switching: *energy }
+  - { slug: community-power, name: Community Power, category: electricity, url: https://communitypower.ie/, pricing_url: https://communitypower.ie/, switching: *energy }
+  - { slug: ecopower, name: Ecopower, category: electricity, url: https://ecopower.ie/, pricing_url: https://ecopower.ie/, switching: *energy }
+  - { slug: prepaypower, name: PrepayPower, category: electricity, url: https://www.prepaypower.ie/, pricing_url: https://www.prepaypower.ie/, switching: *energy, coverage: Pay-as-you-go electricity and gas. }
+
+  # Gas
+  - { slug: bord-gais-energy, name: Bord Gáis Energy, category: gas, url: https://www.bordgaisenergy.ie/, pricing_url: https://www.bordgaisenergy.ie/, switching: *energy }
+  - { slug: electric-ireland, name: Electric Ireland, category: gas, url: https://www.electricireland.ie/, pricing_url: https://www.electricireland.ie/, switching: *energy }
+  - { slug: sse-airtricity, name: SSE Airtricity, category: gas, url: https://www.sseairtricity.com/ie/home, pricing_url: https://www.sseairtricity.com/ie/home, switching: *energy }
+  - { slug: energia, name: Energia, category: gas, url: https://www.energia.ie/, pricing_url: https://www.energia.ie/, switching: *energy }
+  - { slug: flogas, name: Flogas, category: gas, url: https://www.flogas.ie/, pricing_url: https://www.flogas.ie/, switching: *energy, coverage: Natural gas on the Gas Networks Ireland grid; LPG elsewhere. }
+
+  # Bins
+  - { slug: panda, name: Panda, category: bins, url: https://www.panda.ie/, pricing_url: https://www.panda.ie/, switching: *bins }
+  - { slug: greyhound, name: Greyhound, category: bins, url: https://greyhound.ie/, pricing_url: https://greyhound.ie/, switching: *bins }
+  - { slug: city-bin, name: City Bin Co, category: bins, url: https://www.citybin.com/, pricing_url: https://www.citybin.com/, switching: *bins }
+  - { slug: country-clean, name: Country Clean Recycling, category: bins, url: https://www.countryclean.ie/, pricing_url: https://www.countryclean.ie/, switching: *bins }
+  - { slug: barna-recycling, name: Barna Recycling, category: bins, url: https://www.barnarecycling.com/, pricing_url: https://www.barnarecycling.com/, switching: *bins, coverage: West of Ireland. }
+
+  # Streaming & TV
+  - { slug: netflix, name: Netflix, category: streaming, url: https://www.netflix.com/ie/, pricing_url: https://www.netflix.com/ie/, switching: *anytime }
+  - { slug: disney-plus, name: Disney+, category: streaming, url: https://www.disneyplus.com/en-ie, pricing_url: https://www.disneyplus.com/en-ie, switching: *anytime }
+  - { slug: apple-tv-plus, name: Apple TV+, category: streaming, url: https://tv.apple.com/ie, pricing_url: https://tv.apple.com/ie, switching: *anytime }
+  - { slug: prime-video, name: Prime Video, category: streaming, url: https://www.primevideo.com/, pricing_url: https://www.primevideo.com/, switching: *anytime }
+  - { slug: now, name: NOW, category: streaming, url: https://www.nowtv.com/ie, pricing_url: https://www.nowtv.com/ie, switching: *anytime }
+  - { slug: spotify, name: Spotify, category: streaming, url: https://www.spotify.com/ie/, pricing_url: https://www.spotify.com/ie/premium/, switching: *anytime }
+
+  # Software & AI
+  - { slug: anthropic-claude, name: Claude (Anthropic), category: software, url: https://claude.com/, pricing_url: https://claude.com/pricing, switching: *anytime }
+  - { slug: chatgpt, name: ChatGPT (OpenAI), category: software, url: https://openai.com/chatgpt/, pricing_url: https://openai.com/chatgpt/pricing/, switching: *anytime }
+  - { slug: microsoft-365, name: Microsoft 365, category: software, url: https://www.microsoft.com/en-ie/microsoft-365, pricing_url: https://www.microsoft.com/en-ie/microsoft-365, switching: *anytime }
+  - { slug: google-one, name: Google One, category: software, url: https://one.google.com/, pricing_url: https://one.google.com/about/plans, switching: *anytime }
+  - { slug: icloud-plus, name: iCloud+, category: software, url: https://www.apple.com/ie/icloud/, pricing_url: https://www.apple.com/ie/icloud/, switching: *anytime }

@@ -4,7 +4,7 @@ from typing import Annotated, Any
 
 from pydantic import Field as PField, StringConstraints
 
-from sqlalchemy import JSON, Column
+from sqlalchemy import JSON, Column, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -171,19 +171,28 @@ class Category(SQLModel, table=True):
     ai_deals: bool = True
 
 
-class Provider(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    country: str = Field(index=True)
-    category: str = Field(index=True)
-    slug: str
-    name: str
-    url: str = ""
-    pricing_url: str = ""
+HttpsUrl = Pattern(r"^(https://\S+)?$")
+
+
+class ProviderBase(SQLModel):
+    """Editable catalog fields; also the shape of a provider in a country YAML file."""
+    category: Pattern(r"^[a-z0-9_-]+$")
+    slug: Pattern(r"^[a-z0-9-]+$")
+    name: str = Field(min_length=1, max_length=120)
+    url: HttpsUrl = ""
+    pricing_url: HttpsUrl = ""
     plans: list = json_col([])
     plans_captured_at: date | None = None
-    switching: dict = json_col({})
+    switching: dict = json_col({})  # contract_lengths, notice_days, cancel_method, switch_site, regulator
     coverage: str = ""
-    source: str = "manual"  # bundled | ai-accepted | manual
+
+
+class Provider(ProviderBase, table=True):
+    __table_args__ = (UniqueConstraint("country", "category", "slug", name="uq_provider_country_category_slug"),)
+    id: int | None = Field(default=None, primary_key=True)
+    country: str = Field(index=True)
+    source: str = "manual"  # bundled | edited (bundled, changed by a user) | manual | ai-accepted
+    hidden: bool = False  # bundled providers are hidden, not deleted, so the next catalog load doesn't revive them
 
 
 class SuggestionStatus(StrEnum):

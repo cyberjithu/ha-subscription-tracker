@@ -177,13 +177,15 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - Deviations: forms use plain React state + server validation (no react-hook-form/zod: not needed); UI language stays English (`language` field kept, not exposed); admins can see members' personal items (by design: admin = all items)
 - **Gate:** click-through of every screen with seeded data (desktop, phone 375px, light + dark), no unexplained console errors; tests green; committed.
 
-### C8 — Country catalog
-- [ ] `catalogs/ie.yaml` researched (broadband, mobile, electricity, gas, bins, streaming, software) with URLs, switching info, `captured_at`, country settings (EUR, bonkers.ie/switcher.ie, ComReg/CRU, DPS cap)
-- [ ] `services/catalog.py`: load bundled YAML on start (upsert, keep user edits), import/export YAML
-- [ ] Catalog API + UI (browse by country/category, edit, add manual, export)
-- [ ] Subscription form can pick provider from catalog (prefills notice days)
-- [ ] Tests: loader idempotent, user edit survives reload
-- **Gate:** tests green; IE catalog visible in UI.
+### C8 — Country catalog  ✅ done
+- [x] `catalogs/ie.yaml`: 44 providers across broadband, mobile, electricity, gas, bins, streaming, software/AI; switching info per category (terms, notice, how to cancel, compare site, regulator); country settings (EUR, bonkers.ie/switcher.ie, ComReg/CRU, DPS cap €80/month confirmed for 2026). Every URL checked live; 2 bin companies dropped (domains don't resolve). Plans/prices left empty on purpose (go stale; AI deal finder refreshes them)
+- [x] `services/catalog.py`: validated YAML (https-only URLs, slug/country patterns), load on start (add new, refresh untouched bundled, keep edited/added/hidden, user country settings win), admin import (file wins, un-hides), export
+- [x] Model: `Provider.hidden` + unique (country, category, slug); migration tested up/down/up on a populated DB
+- [x] Catalog API: countries (+ admin DPS cap edit), categories, providers (filter, include hidden), admin add/edit/hide/restore/delete, export, import (raw YAML, 1 MB limit, readable errors)
+- [x] Catalog UI: country card with compare/regulator links and DPS cap, category chips, provider cards (terms, notice, cancel method, website/prices links, Edited/Added/Hidden badges), admin edit/add dialog, hide/restore, show hidden, import/export
+- [x] Subscription form provider picker (by category): fills name, account link and notice period
+- [x] Tests: bundled file valid (no duplicates, https, categories), loader idempotent, user edits/hides/manual/country settings survive reload, import wins and survives next start, export round-trips, invalid YAML rejected, API roles
+- **Gate:** tests green (67); IE catalog visible and editable in UI; committed.
 
 ### C9 — AI layer
 - [ ] `services/ai/base.py`: `AIProvider` protocol, `AIRequest`, `extract_json`, `ask()` with Pydantic validation

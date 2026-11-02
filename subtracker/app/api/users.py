@@ -1,4 +1,6 @@
 """Own profile, household user management (admin), add-on settings without secrets."""
+import time
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, SQLModel, select
 
@@ -6,6 +8,9 @@ from ..auth import admin_only, current_user
 from ..config import get_options
 from ..db import get_session
 from ..models import Role, UserPrefs, UserProfile
+from ..services.ai.base import AIError, AIRequest, ask
+from ..services.ai.providers import get_provider
+from ..services.ai.schemas import Ping
 from ..services.ha import ha
 
 router = APIRouter(tags=["users"])
@@ -83,10 +88,8 @@ async def notify_services(_: UserProfile = Depends(current_user)):
 @router.get("/settings")
 def settings(user: UserProfile = Depends(current_user)) -> dict:
     opts = get_options()
-    ai_ready = {
-        "none": False, "anthropic": bool(opts.anthropic_api_key), "openai": bool(opts.openai_api_key),
-        "ollama": bool(opts.ollama_url), "ha_ai_task": ha.live,
-    }.get(opts.ai_provider, False)
+    provider = get_provider(opts)
+    ai_ready = provider is not None and (provider.name != "ha_ai_task" or ha.live)
     public = {"ai_provider": opts.ai_provider, "ai_ready": ai_ready, "countries": opts.countries,
               "ha_connected": ha.live}
     if user.role != Role.admin:
@@ -94,3 +97,17 @@ def settings(user: UserProfile = Depends(current_user)) -> dict:
     full = opts.model_dump(exclude=SECRET_FIELDS)
     full.update({f"{k}_set": bool(getattr(opts, k)) for k in SECRET_FIELDS})
     return public | {"options": full}
+
+
+@router.post("/settings/test-ai")
+async def test_ai(_: UserProfile = Depends(admin_only)) -> dict:
+    """One tiny round trip through the configured AI, to check keys and model names."""
+    provider = get_provider(get_options())
+    if provider is None:
+        return {"ok": False, "detail": "No AI provider is set up. Choose one and add its key in the add-on configuration."}
+    started = time.monotonic()
+    try:
+        await ask(provider, AIRequest('Connectivity check. Answer with ok=true and the name of the model you are.'), Ping)
+    except AIError as e:
+        return {"ok": False, "provider": provider.name, "detail": str(e)}
+    return {"ok": True, "provider": provider.name, "detail": "Connected", "ms": round((time.monotonic() - started) * 1000)}

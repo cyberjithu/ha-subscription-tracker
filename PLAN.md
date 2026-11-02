@@ -187,13 +187,16 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - [x] Tests: bundled file valid (no duplicates, https, categories), loader idempotent, user edits/hides/manual/country settings survive reload, import wins and survives next start, export round-trips, invalid YAML rejected, API roles
 - **Gate:** tests green (67); IE catalog visible and editable in UI; committed.
 
-### C9 — AI layer
-- [ ] `services/ai/base.py`: `AIProvider` protocol, `AIRequest`, `extract_json`, `ask()` with Pydantic validation
-- [ ] Providers: Anthropic SDK (web_search_20260209, pause_turn loop, refusal handling, server-side fallbacks), OpenAI Responses (web_search), Ollama (no search → pricing page text), HA AI Task
-- [ ] `schemas.py` (ProviderSuggestion, DealOffer, BillExtract) + URL validation (https only)
-- [ ] Settings "Test AI connection" endpoint + UI button
-- [ ] Tests with FakeAI: bad JSON, wrong schema, non-https URL dropped
-- **Gate:** tests green; one live call with your key succeeds (if you provide one).
+### C9 — AI layer  ✅ done (live success call pending your API key)
+- [x] `services/ai/base.py`: `AIProvider` protocol, `AIRequest` (+ attachments), `extract_json` (fenced/bare/last block), `ask()` with Pydantic validation and user-safe `AIError`
+- [x] `services/ai/providers.py`: Anthropic SDK (`claude-opus-5-5` default, `web_search_20260209`, pause_turn resume, refusal → error, server-side fallbacks, effort medium), OpenAI Responses (`web_search`, image/PDF input), Ollama (`/api/chat`, no search), HA AI Task (`ai_task.generate_data` with return_response); `get_provider()` from add-on options
+- [x] `services/ai/schemas.py`: Ping, ProviderSuggestion(s), DealOffer(s), BillExtract; non-https / javascript: / relative / spaced URLs dropped; bounded list sizes and numbers
+- [x] `POST /api/settings/test-ai` (admin) + Settings page (provider, model, countries, schedules, connections, "Test AI connection")
+- [x] Tests (10): JSON extraction, schema mismatch, unsupported attachments, URL dropping, Anthropic pause/refusal/web-search/fallbacks via fake client, OpenAI tools/attachments, Ollama via mock transport, HA AI Task, provider factory, endpoint roles and results
+- [x] Real request to the Anthropic API with an invalid key returns "Anthropic rejected the API key" in the UI; settings response contains no secrets
+- [ ] Live successful call with a real key (needs your key in the add-on options; the request body itself has not been accepted by a live API yet)
+- Deviation: Ollama page-text helper moves to C11, where deal search needs it
+- **Gate:** tests green (77); test button works end to end; committed.
 
 ### C10 — Provider discovery + suggestion queue
 - [ ] Discovery job (every `discovery_interval_days`, per country × category) + manual trigger

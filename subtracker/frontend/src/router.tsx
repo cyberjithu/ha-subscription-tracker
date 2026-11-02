@@ -13,6 +13,7 @@ import { Catalog } from "@/pages/catalog";
 import { Inbox } from "@/pages/inbox";
 import { Medicines } from "@/pages/medicines";
 import { Profile } from "@/pages/profile";
+import { Settings } from "@/pages/settings";
 import { SubscriptionDetail } from "@/pages/subscription-detail";
 import { SubscriptionFormPage } from "@/pages/subscription-form";
 import { SubscriptionsList } from "@/pages/subscriptions-list";
@@ -36,7 +37,7 @@ export const NAV: NavItem[] = [
   { to: "/suggestions", label: "Suggestions", icon: SparklesIcon, adminOnly: true, chunk: "C10" },
   { to: "/inbox", label: "Inbox", icon: BellIcon, chunk: "C7", page: Inbox },
   { to: "/users", label: "Users", icon: UsersIcon, adminOnly: true, chunk: "C7", page: Users },
-  { to: "/settings", label: "Settings", icon: SettingsIcon, adminOnly: true, chunk: "C9" },
+  { to: "/settings", label: "Settings", icon: SettingsIcon, adminOnly: true, chunk: "C9", page: Settings },
   { to: "/profile", label: "Profile", icon: CircleUserIcon, chunk: "C7", page: Profile },
 ];
 

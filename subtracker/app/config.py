@@ -14,7 +14,7 @@ CATALOG_DIR = APP_DIR.parent / "catalogs"
 class Options(BaseModel):
     ai_provider: str = "none"
     anthropic_api_key: str = ""
-    anthropic_model: str = "claude-sonnet-5-5"
+    anthropic_model: str = "claude-opus-5-5"
     openai_api_key: str = ""
     openai_model: str = "gpt-5"
     ollama_url: str = ""

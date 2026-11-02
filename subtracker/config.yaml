@@ -17,7 +17,7 @@ map:
 options:
   ai_provider: none
   anthropic_api_key: ""
-  anthropic_model: claude-sonnet-5-5
+  anthropic_model: claude-opus-5-5
   openai_api_key: ""
   openai_model: gpt-5
   ollama_url: ""
@@ -37,7 +37,7 @@ schema:
   anthropic_model: str?
   openai_api_key: password?
   openai_model: str?
-  ollama_url: url?
+  ollama_url: str?
   ollama_model: str?
   ha_ai_task_entity: str?
   countries:
@@ -45,6 +45,6 @@ schema:
   discovery_interval_days: int(0,365)
   deal_search_lead_days: int(1,365)
   resend_api_key: password?
-  resend_from: email?
+  resend_from: str?
   email_notify_service: str?
   install_lovelace_card: bool

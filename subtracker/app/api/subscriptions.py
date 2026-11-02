@@ -162,11 +162,23 @@ def list_bills(sub_id: int, user: UserProfile = Depends(current_user), session: 
     return session.exec(select(Bill).where(Bill.subscription_id == sub_id).order_by(Bill.period_start)).all()
 
 
+def _check_period(body: BillBase) -> None:
+    if body.period_end < body.period_start:
+        raise HTTPException(422, "period_end is before period_start")
+
+
+def _bill(session: Session, sub_id: int, bill_id: int, user: UserProfile) -> Bill:
+    get_visible(session, sub_id, user)
+    bill = session.get(Bill, bill_id)
+    if not bill or bill.subscription_id != sub_id:
+        raise HTTPException(404, "Bill not found")
+    return bill
+
+
 @router.post("/{sub_id}/bills", response_model=Bill, status_code=201)
 def add_bill(sub_id: int, body: BillBase, user: UserProfile = Depends(writer), session: Session = Depends(get_session)):
     get_visible(session, sub_id, user)
-    if body.period_end < body.period_start:
-        raise HTTPException(422, "period_end is before period_start")
+    _check_period(body)
     bill = Bill(**body.model_dump(), subscription_id=sub_id)
     session.add(bill)
     session.commit()
@@ -174,13 +186,20 @@ def add_bill(sub_id: int, body: BillBase, user: UserProfile = Depends(writer), s
     return bill
 
 
+@router.put("/{sub_id}/bills/{bill_id}", response_model=Bill)
+def update_bill(sub_id: int, bill_id: int, body: BillBase, user: UserProfile = Depends(writer),
+                session: Session = Depends(get_session)):
+    bill = _bill(session, sub_id, bill_id, user)
+    _check_period(body)
+    bill.sqlmodel_update(body.model_dump())
+    session.commit()
+    session.refresh(bill)
+    return bill
+
+
 @router.delete("/{sub_id}/bills/{bill_id}", status_code=204)
 def delete_bill(sub_id: int, bill_id: int, user: UserProfile = Depends(writer), session: Session = Depends(get_session)):
-    get_visible(session, sub_id, user)
-    bill = session.get(Bill, bill_id)
-    if not bill or bill.subscription_id != sub_id:
-        raise HTTPException(404, "Bill not found")
-    session.delete(bill)
+    session.delete(_bill(session, sub_id, bill_id, user))
     session.commit()
 
 

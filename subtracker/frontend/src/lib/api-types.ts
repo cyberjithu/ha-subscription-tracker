@@ -135,7 +135,8 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put?: never;
+        /** Update Bill */
+        put: operations["update_bill_api_subscriptions__sub_id__bills__bill_id__put"];
         post?: never;
         /** Delete Bill */
         delete: operations["delete_bill_api_subscriptions__sub_id__bills__bill_id__delete"];
@@ -1370,6 +1371,42 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Bill"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_bill_api_subscriptions__sub_id__bills__bill_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub_id: number;
+                bill_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillBase"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

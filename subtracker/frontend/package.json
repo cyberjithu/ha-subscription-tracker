@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "gen:api": "openapi-typescript ../openapi.json -o src/lib/api-types.ts"
+    "gen:api": "cd .. && SUBTRACKER_NO_JOBS=1 ../.venv/bin/python -c \"import json; from app.main import app; print(json.dumps(app.openapi()))\" > openapi.json && cd frontend && openapi-typescript ../openapi.json -o src/lib/api-types.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",

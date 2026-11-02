@@ -139,3 +139,15 @@ def test_input_validation(api):
     assert r.status_code == 422
     m = create(api, name="Med", category="medicine", kind="refill", price=0)
     assert api.put(f"/api/subscriptions/{m['id']}/medicine", json={"daily_dose": -1}, headers=ALICE).status_code == 422
+
+
+def test_bill_update(api):
+    s = create(api, kind="usage")
+    other = create(api, kind="usage", name="Other")
+    url = f"/api/subscriptions/{s['id']}/bills"
+    b = api.post(url, json={"period_start": "2026-01-01", "period_end": "2026-01-31", "amount": 50}, headers=ALICE).json()
+    body = {"period_start": "2026-01-01", "period_end": "2026-01-31", "amount": 55.5}
+    assert api.put(f"{url}/{b['id']}", json=body, headers=ALICE).json()["amount"] == 55.5
+    assert api.put(f"{url}/{b['id']}", json=body | {"period_end": "2025-12-01"}, headers=ALICE).status_code == 422
+    assert api.put(f"/api/subscriptions/{other['id']}/bills/{b['id']}", json=body, headers=ALICE).status_code == 404
+    assert api.put(f"{url}/{b['id']}", json=body, headers=VIEWER).status_code == 403

@@ -54,6 +54,9 @@ class FakeHA:
     async def persistent(self, title, message, notification_id):
         self.calls.append(("persistent", notification_id, title))
 
+    async def delete_state(self, entity_id):
+        self.calls.append(("delete", entity_id))
+
     async def call_service(self, service, data, return_response=False):
         self.calls.append(("service", service, data))
 

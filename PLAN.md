@@ -127,9 +127,9 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - [x] Tests: shared vs personal routing, muted category, quiet-hours delay then flush, Resend called with fake HTTP, dedupe
 - **Gate:** tests green; dry-run job logs expected HA calls for seeded data.
 
-### C4 — HA sensors
-- [ ] Sensor job (startup + every 10 min): `sensor.subtracker_<slug>`, `sensor.subtracker_monthly_total`, `sensor.subtracker_next_deadline`
-- [ ] Tests with FakeHA: entity ids, state, attributes
+### C4 — HA sensors  ✅ done
+- [x] Sensor job (startup + every 10 min): `sensor.subtracker_<slug>`, `sensor.subtracker_monthly_total`, `sensor.subtracker_next_deadline` (with `upcoming` list for the card); stale states deleted
+- [x] Tests with FakeHA: entity ids, state, attributes
 - **Gate:** tests green.
 
 ### C5 — Users & preferences API

@@ -32,6 +32,16 @@ class HAClient:
     async def set_state(self, entity_id: str, state: Any, attributes: dict) -> None:
         await self._post(f"/states/{entity_id}", {"state": state, "attributes": attributes})
 
+    async def delete_state(self, entity_id: str) -> None:
+        if not self.live:
+            log.info("HA (dry run) DELETE /states/%s", entity_id)
+            return
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.delete(f"{self.base_url}/states/{entity_id}",
+                                    headers={"Authorization": f"Bearer {self.token}"})
+            if r.status_code != 404:
+                r.raise_for_status()
+
     async def call_service(self, service: str, data: dict, return_response: bool = False) -> Any:
         domain, name = service.split(".", 1)
         params = {"return_response": "true"} if return_response else None

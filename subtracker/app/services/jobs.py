@@ -8,6 +8,7 @@ from sqlmodel import Session
 from ..db import engine
 from .notify import flush_pending
 from .reminders import run_reminders
+from .sensors import push_sensors
 
 log = logging.getLogger("subtracker.jobs")
 scheduler = AsyncIOScheduler()
@@ -16,6 +17,14 @@ scheduler = AsyncIOScheduler()
 async def reminders_job() -> None:
     with Session(engine) as session:
         log.info("Reminders sent: %s", await run_reminders(session))
+
+
+async def sensors_job() -> None:
+    with Session(engine) as session:
+        try:
+            await push_sensors(session)
+        except Exception:  # HA may be restarting; next run retries
+            log.exception("Sensor push failed")
 
 
 async def flush_job() -> None:
@@ -28,6 +37,8 @@ def start() -> None:
         return
     # coalesce + next_run_time=now: a missed 08:00 run (add-on was stopped) still happens once at startup
     scheduler.add_job(reminders_job, "cron", hour=8, id="reminders", coalesce=True, next_run_time=datetime.now(),
+                      replace_existing=True)
+    scheduler.add_job(sensors_job, "interval", minutes=10, id="sensors", next_run_time=datetime.now(),
                       replace_existing=True)
     scheduler.add_job(flush_job, "interval", minutes=5, id="flush", replace_existing=True)
     scheduler.start()

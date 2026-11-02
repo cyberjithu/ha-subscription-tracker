@@ -1,0 +1,9 @@
+{
+  "name": "SubTracker add-on devcontainer",
+  "image": "ghcr.io/home-assistant/devcontainer:addons",
+  "appPort": ["7123:8123", "7357:4357"],
+  "postStartCommand": "bash devcontainer_bootstrap",
+  "runArgs": ["-e", "GIT_EDITOR=code --wait", "--privileged"],
+  "containerEnv": {"WORKSPACE_DIRECTORY": "${containerWorkspaceFolder}"},
+  "mounts": ["type=volume,target=/var/lib/docker"]
+}

@@ -1,0 +1,217 @@
+# SubTracker — Home Assistant add-on for household subscriptions
+
+## Context
+User wants one place inside Home Assistant to track recurring commitments (internet, gas, electricity, bins, Netflix, Apple TV, Anthropic, monthly medicines…), get warned before renewal / notice deadlines, and — near renewal — have an AI find better deals instead of silently rolling over. Country catalogs of known providers (Ireland first, then DE, FR…) are curated by the user; AI may only *propose* providers into a review queue, never write to the catalog directly.
+
+Decisions from Q&A:
+- Packaging: HA **add-on** (Docker, Ingress panel, own SQLite) that pushes sensors + notifications into HA.
+- Stack: backend Python 3.12, FastAPI (JSON API), SQLModel/SQLite, Alembic, APScheduler. Frontend React SPA: Vite + TypeScript, Tailwind + shadcn/ui, TanStack Query + Router, Recharts, react-hook-form + zod. Multi-stage Docker build: Node stage builds static files, runtime image is Python only. Own polished design that follows HA light/dark + accent.
+- Users: roles admin / member / viewer; per-user notification prefs and profile/display settings.
+- Email via **Resend** (API key in options) in addition to HA notify services.
+- Lovelace custom card in v1.
+- AI: **pluggable** — Claude, OpenAI, Ollama, HA AI Task. Deal search uses AI web search.
+- Alerts: HA mobile push, HA persistent notification, in-app inbox, email (HA notify service).
+- Users: household **shared** list + **personal** items per HA user (owner only gets personal alerts).
+- Billing shapes: fixed recurring, contract term (notice + auto-renew), variable usage bills, refill-based (medicines).
+- Costs with history; per-subscription AI privacy toggles (default: nothing personal; prompt preview before send).
+- Catalog: bundled YAML per country; entries hold name/URL/category, typical plans+prices, switching info, coverage. Monthly (configurable) AI discovery → pending suggestions → accept/reject.
+- Medicines: supply countdown, script expiry, pharmacy + DPS cap tracking; **no AI** for medicines.
+- Documents: upload PDFs/images; AI can prefill fields from a bill (vision-capable providers only).
+- v1 = all of: tracking/reminders/sensors, catalog + suggestion queue, deal finder, cost dashboard.
+- Location: new git repo `~/Documents/Projects/ha-subscription-tracker` (add-on repository layout).
+- Testing: local pytest with fakes, HA devcontainer, then real HA box via GitHub repo URL.
+
+## Repo layout
+```
+ha-subscription-tracker/
+  repository.yaml                 # HA add-on repository manifest
+  .devcontainer.json              # official HA add-on devcontainer
+  subtracker/                     # the add-on
+    config.yaml                   # ingress: true, homeassistant_api: true, options schema
+    Dockerfile  run.sh  CHANGELOG.md  DOCS.md  icon.png
+    app/
+      main.py                     # FastAPI app, ingress base path, user from X-Remote-User-* headers
+      db.py models.py             # SQLModel tables
+      migrations/                 # Alembic (data persists in /data across upgrades)
+      services/
+        schedule.py               # deadline math (pure functions, heavily tested)
+        jobs.py                   # APScheduler: daily reminders, sensor refresh, discovery, deal search
+        ha.py                     # Supervisor/Core API client: states, notify, persistent_notification, ai_task
+        notify.py                 # fan-out to push/persistent/inbox/email, owner-aware
+        catalog.py                # load/import/export country YAML, accept suggestion -> catalog
+        ai/
+          base.py                 # AIProvider protocol: complete_json(prompt, schema, web_search, images)
+          anthropic.py openai.py ollama.py ha_ai_task.py
+          prompts.py schemas.py   # Pydantic output schemas: ProviderSuggestion, DealOffer, BillExtract
+      api/                        # /api/* JSON routers: subscriptions, bills, medicines, catalog, suggestions, deals, inbox, dashboard, settings, documents, users, me
+      auth.py                     # current user + role guard from Ingress headers
+      services/email_resend.py    # Resend HTTP API (httpx, no SDK)
+    catalogs/ie.yaml              # Ireland seed
+  frontend/                       # React SPA (Vite, TS, Tailwind, shadcn/ui); built into subtracker/app/static
+    src/routes/                   # Dashboard, Subscriptions, Detail, Medicines, Catalog, Suggestions, Deals, Inbox, Settings, Users, Profile
+    src/lib/api.ts                # typed client generated from FastAPI OpenAPI (openapi-typescript)
+  card/subtracker-card.ts         # Lit Lovelace card, built to subtracker-card.js
+  tests/                          # pytest; FakeHA + FakeAI; Vitest for key frontend logic
+```
+
+## Data model (SQLModel)
+- **Subscription**: name, category, kind (`fixed|contract|usage|refill`), provider_id (nullable → catalog), owner_user_id (null = shared), price, currency, cycle (week/month/year/custom days), start_date, next_renewal, contract_end, auto_renew, notice_days (nullable — optional per item), reminder_days (list, default [30,14,7,1]), ai_enabled, ai_share_usage, ai_share_location, account_url, notes, status (active/cancelled/switching).
+- **PriceChange** (sub, price, effective_date) → cost history.
+- **Bill** (sub, period_start, period_end, amount, usage_value, usage_unit) for gas/electricity.
+- **MedicineDetail** (sub 1:1): qty_on_hand, daily_dose, refill_lead_days, script_expiry, pharmacy, cost_per_fill.
+- **Document** (sub, filename, path under `/data/docs`, kind contract/bill).
+- **Country** (code, currency, settings JSON e.g. IE DPS monthly cap — configurable value), **Category**.
+- **Provider** (country, category, slug, name, url, pricing_url, plans JSON + captured_at, switching JSON {notice_days, cancel_method, contract_lengths, switch_site, regulator}, coverage text, source `bundled|ai-accepted|manual`).
+- **Suggestion** (country, category, payload JSON, source_urls, status `pending|accepted|rejected`, created_at) — AI output lands here only.
+- **DealSearch** (sub, ran_at, provider_used, prompt_preview, offers JSON, status) — results shown, user chooses.
+- **InboxItem** (user nullable, title, body, link, read).
+- **UserProfile** (ha_user_id, display_name, avatar_color/avatar file, role `admin|member|viewer`, theme `ha|light|dark`, default_view, date_format, language, push_service e.g. `notify.mobile_app_jithin_iphone`, email, channels {push, persistent, inbox, email}, quiet_hours, reminder_days override, muted_categories).
+- Roles: admin = settings, AI keys, catalog accept/reject, user management, all items; member = shared + own personal, run deal search; viewer = read-only. First HA user to open the panel becomes admin; new users default to member.
+
+## Core logic
+- `schedule.py` (pure): next renewal from cycle; **notice deadline = contract_end (or next_renewal) − notice_days**; refill run-out date = today + qty/daily_dose; script expiry; usage-bill normalized monthly cost. Monthly-equivalent cost for dashboard.
+- Daily job: for each active sub compute upcoming events (notice deadline, renewal, run-out, script expiry), fire reminders on matching `reminder_days`, dedupe via InboxItem key.
+- Sensor job (every 10 min + startup, since API-set states vanish on HA restart): `sensor.subtracker_<slug>` (state = days to next deadline, attrs: price, renewal, notice_deadline, owner), `sensor.subtracker_monthly_total`, `sensor.subtracker_next_deadline`.
+- Notifications: shared → all users with matching prefs; personal → owner only. Each user's channels, quiet hours (delay, not drop) and muted categories respected. Mobile push uses `uri` action opening the Ingress page (no websocket listener in v1). Email via Resend if key set, else HA `email_notify_service`.
+- Lovelace card: Lit card reads `sensor.subtracker_*` from `hass` (no add-on API calls): upcoming deadlines list, monthly total, tap opens panel. Add-on copies `subtracker-card.js` to `/config/www/` on start (`homeassistant_config:rw` map); DOCS explain adding `/local/subtracker-card.js` resource.
+- Visibility: Ingress headers give HA user; views show shared + own personal. "Add to my list" creates personal item; "Make shared" toggles owner to null.
+
+## AI flows (all go through `AIProvider`, output validated by Pydantic; invalid/non-https URLs dropped)
+1. **Provider discovery** (monthly per enabled country × category, plus manual button): prompt includes existing catalog slugs to avoid dupes → returns list of ProviderSuggestion with source URLs → Suggestion rows + notification. Accept = `catalog.py` writes Provider (user can edit before accept). Reject is remembered so it is not re-suggested.
+2. **Deal finder** (auto at notice_deadline − `deal_search_lead_days`, default 45; plus manual button; skipped for `refill`/medicines and `ai_enabled=false`): context = category, country, current plan+price; usage/Eircode only if the sub's toggles allow. Shows prompt preview in UI on manual runs. Web search: Claude web_search tool, OpenAI web_search tool, HA AI Task (depends on configured agent), Ollama (no search → fetch catalog pricing_urls with httpx and pass text). Output: ranked DealOffer list (provider, plan, price, contract, est. annual saving, source URL, caveats). Notify with top saving.
+3. **Bill prefill** (on document upload, vision providers only): BillExtract → prefilled form, user confirms.
+- Add-on options: `ai_provider`, `anthropic_api_key`, `openai_api_key`, `ollama_url`, `ha_ai_task_entity`, model names (defaults to current models, e.g. `claude-sonnet-5-5`), `countries: [IE]`, `discovery_interval_days: 30`, `deal_search_lead_days: 45`, `resend_api_key`, `resend_from`, `email_notify_service` (fallback). Per-user targets live in the Users/Profile UI, not options.
+
+## Ireland seed (`catalogs/ie.yaml`)
+Categories + well-known providers with URLs and switching info: broadband (eir, Virgin Media, Vodafone, Sky, Pure Telecom, Digiweb…), mobile, electricity & gas (Electric Ireland, Bord Gáis, SSE Airtricity, Energia, Flogas, Pinergy, Community Power…), bins (Panda, Greyhound, City Bin, Country Clean, Barna…), streaming/TV, software/AI subscriptions (no catalog, generic). Country settings: currency EUR, switch sites (bonkers.ie, switcher.ie), regulators (ComReg, CRU), DPS cap value (editable). Verify URLs/notice periods during build via web search; mark `captured_at`.
+
+## Build process (rules)
+- Work in small chunks C0–C14 below. Each chunk has a TODO checklist and a **Gate**.
+- This checklist lives in the repo as `PLAN.md` (copied on approval). Tick `[x]` as each item lands; never tick an item that is untested.
+- **Move to next chunk only when every item in current chunk is `[x]` and its Gate passes.** At each gate: run tests, show result, commit (`feat(cN): …`), short report to user, then continue.
+- Anything found missing mid-chunk is added to that chunk's list, not deferred silently.
+
+## Chunks & TODO
+
+### C0 — Repo skeleton  ✅ done
+- [x] Folder `~/Documents/Projects/ha-subscription-tracker` + `git init`
+- [x] `repository.yaml`, `subtracker/config.yaml` (options schema), `build.yaml`, `Dockerfile` (multi-stage), `run.sh`, `requirements.txt`
+- [x] `.venv` (Python 3.12) with deps + pytest
+- [x] `.gitignore`, `README.md` stub, `PLAN.md` (this checklist), `pyproject.toml` (pytest config, asyncio mode)
+- [x] `.devcontainer.json` (HA add-on devcontainer)
+- **Gate:** `pytest` runs (0 tests OK), first commit made.
+
+### C1 — Data layer + app boot + auth
+- [x] `app/config.py` (options.json + env overrides), `app/db.py`, `app/models.py` (all tables)
+- [ ] Alembic setup (`alembic.ini`, `migrations/env.py`) + initial migration generated from models
+- [ ] `app/main.py`: FastAPI, `/api/health`, SPA static serving with Ingress-safe relative paths, startup runs scheduler
+- [ ] `app/auth.py`: user from `X-Remote-User-Id/Name/Display-Name`; auto-create UserProfile; first user = admin; `require_role()` dependency; dev fallback user when not under Supervisor
+- [ ] Tests: header → profile created; first admin; viewer blocked on write route
+- **Gate:** `alembic upgrade head` on empty DB works; `uvicorn` starts; `/api/health` 200; auth tests green.
+
+### C2 — Subscriptions API (all 4 kinds)
+- [ ] CRUD `/api/subscriptions` with visibility (shared + own personal; admin sees all)
+- [ ] Price edit auto-writes `PriceChange`; `/api/subscriptions/{id}/prices`
+- [ ] "Add to my list" (copy as personal) + "Make shared" endpoints
+- [ ] Bills CRUD (usage kind), MedicineDetail get/put (refill kind)
+- [ ] Documents upload/download/delete (stored `/data/docs`, size + type limits)
+- [ ] Tests: visibility rules, viewer read-only, price history, medicine detail, upload limits
+- **Gate:** all tests green; manual curl create of each kind.
+
+### C3 — Schedule math + reminders + inbox
+- [x] `services/schedule.py` (renewal roll-forward, notice deadline, refill run-out, monthly cost, events)
+- [x] `services/notify.py` (owner-aware fan-out, mutes, quiet hours, dedupe), `services/ha.py`, `services/email_resend.py`
+- [ ] Tests for schedule: month-end, leap year, notice deadline, refill, usage-bill average
+- [ ] `services/jobs.py`: daily reminder job (fires on `reminder_days`, dedupe key), quiet-hours flush job (every 5 min)
+- [ ] Inbox API: list, mark read, mark all read
+- [ ] Tests: shared vs personal routing, muted category, quiet-hours delay then flush, Resend called with fake HTTP, dedupe
+- **Gate:** tests green; dry-run job logs expected HA calls for seeded data.
+
+### C4 — HA sensors
+- [ ] Sensor job (startup + every 10 min): `sensor.subtracker_<slug>`, `sensor.subtracker_monthly_total`, `sensor.subtracker_next_deadline`
+- [ ] Tests with FakeHA: entity ids, state, attributes
+- **Gate:** tests green.
+
+### C5 — Users & preferences API
+- [ ] `/api/me` get/put (profile, display, channels, quiet hours, reminder override, muted categories)
+- [ ] `/api/users` (admin: list, change role, remove), list HA `notify.*` services for picker
+- [ ] `/api/settings` (admin: read effective options, AI provider status — no secrets returned)
+- [ ] Tests: member cannot change roles; secrets never in response
+- **Gate:** tests green.
+
+### C6 — Frontend shell
+- [ ] `subtracker/frontend`: Vite + React + TS + Tailwind + shadcn/ui, TanStack Router + Query
+- [ ] Ingress-safe base (`base: './'`, relative API URLs)
+- [ ] Typed client from FastAPI OpenAPI (`openapi-typescript`)
+- [ ] Layout: sidebar/topbar, mobile nav, theme (HA/light/dark), role-aware menu
+- [ ] FastAPI serves built `dist`; `vite dev` proxies `/api`
+- **Gate:** `npm run build` ok; app loads via uvicorn in browser pane, light + dark, phone width.
+
+### C7 — Frontend core screens
+- [ ] Subscriptions list (filters: category, owner, kind, status; upcoming deadline badges)
+- [ ] Create/edit form adapting to kind (fixed/contract/usage/refill), privacy toggles
+- [ ] Detail page: timeline of events, price history, bills, documents, "add to my list"/"make shared"
+- [ ] Medicines view (supply bar, run-out date, script expiry, DPS monthly total vs cap)
+- [ ] Inbox, Profile/preferences, Users admin
+- **Gate:** click-through of every screen with seeded data, no console errors.
+
+### C8 — Country catalog
+- [ ] `catalogs/ie.yaml` researched (broadband, mobile, electricity, gas, bins, streaming, software) with URLs, switching info, `captured_at`, country settings (EUR, bonkers.ie/switcher.ie, ComReg/CRU, DPS cap)
+- [ ] `services/catalog.py`: load bundled YAML on start (upsert, keep user edits), import/export YAML
+- [ ] Catalog API + UI (browse by country/category, edit, add manual, export)
+- [ ] Subscription form can pick provider from catalog (prefills notice days)
+- [ ] Tests: loader idempotent, user edit survives reload
+- **Gate:** tests green; IE catalog visible in UI.
+
+### C9 — AI layer
+- [ ] `services/ai/base.py`: `AIProvider` protocol, `AIRequest`, `extract_json`, `ask()` with Pydantic validation
+- [ ] Providers: Anthropic SDK (web_search_20260209, pause_turn loop, refusal handling, server-side fallbacks), OpenAI Responses (web_search), Ollama (no search → pricing page text), HA AI Task
+- [ ] `schemas.py` (ProviderSuggestion, DealOffer, BillExtract) + URL validation (https only)
+- [ ] Settings "Test AI connection" endpoint + UI button
+- [ ] Tests with FakeAI: bad JSON, wrong schema, non-https URL dropped
+- **Gate:** tests green; one live call with your key succeeds (if you provide one).
+
+### C10 — Provider discovery + suggestion queue
+- [ ] Discovery job (every `discovery_interval_days`, per country × category) + manual trigger
+- [ ] Dedupe vs catalog slugs and previously rejected
+- [ ] Suggestions API + UI (review, edit, accept → Provider, reject); admin only
+- [ ] Notification "N new providers suggested"
+- [ ] Tests: AI output never written to Provider until accept; rejected not re-suggested
+- **Gate:** tests green; manual discovery run for IE/broadband shows pending items.
+
+### C11 — Deal finder + bill prefill
+- [ ] Deal prompt builder respecting per-sub privacy toggles; prompt preview endpoint
+- [ ] Auto trigger at notice_deadline − `deal_search_lead_days` (once per term); skipped for refill/ai_disabled/categories with `ai_deals=false`
+- [ ] Deals API + UI (ranked offers, savings, source links, "mark switching")
+- [ ] Bill upload → AI extract → prefilled bill form (vision providers only)
+- [ ] Tests: privacy (no Eircode/usage unless toggled), medicines never sent, auto trigger fires once
+- **Gate:** tests green; manual deal search on a sample broadband sub returns offers.
+
+### C12 — Cost dashboard
+- [ ] Dashboard API: monthly total, by category, by owner, 12-month trend (price history + bills), upcoming 30 days
+- [ ] Dashboard UI with Recharts (stat tiles, category donut/bar, trend line, upcoming list)
+- [ ] Tests: aggregation math
+- **Gate:** tests green; dashboard renders with seed data.
+
+### C13 — Lovelace card
+- [ ] `subtracker/card`: Lit card reading `sensor.subtracker_*` (upcoming list, monthly total, tap → panel), config editor
+- [ ] Copied to `/config/www` on start when option enabled
+- **Gate:** card builds; renders in HA devcontainer.
+
+### C14 — Packaging & release
+- [ ] Local `docker build` for amd64 passes
+- [ ] `DOCS.md` (install, options, card resource, AI providers, privacy), `CHANGELOG.md`, icon/logo
+- [ ] Devcontainer run: Ingress panel works, sensors, persistent notification
+- [ ] Push to GitHub (on your OK), install on real HA box
+- **Gate:** add-on running on your HA; mobile push received.
+
+### Later (not v1)
+- [ ] `catalogs/de.yaml`, `catalogs/fr.yaml`
+- [ ] Actionable notification responses via HA websocket
+
+## Verification
+- `pytest`: schedule math (contract w/ notice, auto-renew rollover, refill run-out, leap years), notify routing (shared vs personal), suggestion accept never touches catalog until accept, AI output validation with FakeAI returning bad JSON/URLs, sensor payloads via FakeHA.
+- Role tests: viewer cannot write, member cannot see others' personal items or accept suggestions; quiet hours delay delivery; Resend called with FakeHTTP.
+- Local run: `uvicorn app.main:app` (`SUPERVISOR_TOKEN` unset → HA client log-only, dev header fakes user) + `vite dev` proxying `/api`; click through UI in browser pane, light + dark.
+- Devcontainer: start Supervisor, install local add-on, confirm Ingress panel, sensors appear in Developer Tools → States, persistent notification fires on a sub with deadline tomorrow.
+- Real box: add GitHub repo URL in Add-on Store, install, configure Claude key, run manual discovery for IE/broadband and a deal search; confirm mobile push arrives.

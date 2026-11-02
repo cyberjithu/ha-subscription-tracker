@@ -1,0 +1,50 @@
+name: SubTracker
+version: "0.1.0"
+slug: subtracker
+description: Track household subscriptions, contracts, bills and medicines. AI finds better deals before renewal.
+url: https://github.com/jithin/ha-subscription-tracker
+arch:
+  - aarch64
+  - amd64
+init: false
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:calendar-sync
+panel_title: Subscriptions
+homeassistant_api: true
+map:
+  - homeassistant_config:rw
+options:
+  ai_provider: none
+  anthropic_api_key: ""
+  anthropic_model: claude-sonnet-5-5
+  openai_api_key: ""
+  openai_model: gpt-5
+  ollama_url: ""
+  ollama_model: llama3.1
+  ha_ai_task_entity: ""
+  countries:
+    - IE
+  discovery_interval_days: 30
+  deal_search_lead_days: 45
+  resend_api_key: ""
+  resend_from: ""
+  email_notify_service: ""
+  install_lovelace_card: true
+schema:
+  ai_provider: list(none|anthropic|openai|ollama|ha_ai_task)
+  anthropic_api_key: password?
+  anthropic_model: str?
+  openai_api_key: password?
+  openai_model: str?
+  ollama_url: url?
+  ollama_model: str?
+  ha_ai_task_entity: str?
+  countries:
+    - str
+  discovery_interval_days: int(0,365)
+  deal_search_lead_days: int(1,365)
+  resend_api_key: password?
+  resend_from: email?
+  email_notify_service: str?
+  install_lovelace_card: bool

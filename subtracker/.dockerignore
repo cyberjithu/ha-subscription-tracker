@@ -1,0 +1,4 @@
+app/static
+frontend/node_modules
+card/node_modules
+openapi.json

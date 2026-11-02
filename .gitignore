@@ -7,3 +7,5 @@ node_modules/
 dist/
 subtracker/app/static/
 .DS_Store
+subtracker/openapi.json
+*.tsbuildinfo

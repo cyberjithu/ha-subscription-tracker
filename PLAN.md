@@ -151,12 +151,13 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - [x] 9. Input validation: price ≥ 0, notice_days ≥ 0, reminder_days ints 0–365, cycle_days ≥ 1
 - **Gate:** each fix has a test; full suite green; committed.
 
-### C6 — Frontend shell
-- [ ] `subtracker/frontend`: Vite + React + TS + Tailwind + shadcn/ui, TanStack Router + Query
-- [ ] Ingress-safe base (`base: './'`, relative API URLs)
-- [ ] Typed client from FastAPI OpenAPI (`openapi-typescript`)
-- [ ] Layout: sidebar/topbar, mobile nav, theme (HA/light/dark), role-aware menu
-- [ ] FastAPI serves built `dist`; `vite dev` proxies `/api`
+### C6 — Frontend shell  ✅ done
+- [x] `subtracker/frontend`: Vite + React + TS + Tailwind + shadcn/ui, TanStack Router (hash history: Ingress-safe) + Query
+- [x] Ingress-safe base (`base: './'`, relative API URLs)
+- [x] Typed client from FastAPI OpenAPI (`openapi-typescript`)
+- [x] Layout: sidebar/topbar, mobile nav, theme (HA/light/dark), role-aware menu
+- [x] Vite builds into `app/static` (served by FastAPI); `vite dev` proxies `/api`
+- [x] Theme choice saved to profile (`PUT /api/me`), survives reload; mobile sheet closes on desktop width
 - **Gate:** `npm run build` ok; app loads via uvicorn in browser pane, light + dark, phone width.
 
 ### C7 — Frontend core screens

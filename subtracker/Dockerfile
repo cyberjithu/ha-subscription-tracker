@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app app
 COPY catalogs catalogs
 COPY alembic.ini .
-COPY --from=web /src/frontend/dist app/static
+COPY --from=web /src/app/static app/static
 COPY --from=web /src/card/dist/subtracker-card.js card/subtracker-card.js
 COPY run.sh /run.sh
 RUN chmod a+x /run.sh

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "subtracker",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd subtracker && SUBTRACKER_DATA=../.data ../.venv/bin/alembic upgrade head && SUBTRACKER_DATA=../.data ../.venv/bin/uvicorn app.main:app --port 8099"],
+      "port": 8099
+    }
+  ]
+}

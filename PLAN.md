@@ -250,7 +250,8 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - [x] `DOCS.md` (install, roles, options, notifications, sensors, card, AI & privacy, data, troubleshooting), `CHANGELOG.md`, `icon.png` (128²), `logo.png` (250×100)
 - [x] Repository/add-on URLs point to `github.com/cyberjithu/ha-subscription-tracker`
 - [ ] Devcontainer run: needs Home Assistant onboarding (creating the HA owner account) — your step
-- [ ] Push to GitHub (on your OK), install on real HA box: Ingress panel, sensors, persistent notification, mobile push, card render
+- [x] Public repo https://github.com/cyberjithu/ha-subscription-tracker (history checked first: no keys, no `.data`, no database); `repository.yaml` and add-on files readable by Home Assistant
+- [ ] Install on real HA box: Ingress panel, sensors, persistent notification, mobile push, card render
 - **Gate:** add-on running on your HA; mobile push received.
 
 ### Later (not v1)

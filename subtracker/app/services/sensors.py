@@ -7,6 +7,7 @@ from sqlmodel import Session, select
 from ..models import Bill, Kind, MedicineDetail, SubStatus, Subscription
 from . import schedule
 from .ha import HAClient, ha as default_ha
+from .notify import PANEL_URL
 
 # shortcut: in-memory only, so a subscription deleted while the add-on is stopped stays in HA until HA restarts.
 _pushed: set[str] = set()  # entity ids pushed last run, so removed subscriptions get cleared
@@ -45,6 +46,7 @@ async def push_sensors(session: Session, today: date | None = None, ha: HAClient
         "friendly_name": "Subscriptions monthly total", "icon": "mdi:cash-multiple", "unit_of_measurement": currency,
         "device_class": "monetary", "state_class": "total", "by_category": {k: round(v, 2) for k, v in totals.items()},
         "count": len(subs),
+        "panel_url": PANEL_URL,  # lets the dashboard card open the add-on without guessing its slug
     })
     upcoming.sort(key=lambda x: x[0].date)
     first = upcoming[0] if upcoming else None

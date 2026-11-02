@@ -236,16 +236,21 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - Note: the JS bundle is now ~310 KB gzipped (Recharts); fine on a LAN, code-splitting possible later
 - **Gate:** tests green (101); dashboard checked desktop light + dark, phone 375px, tooltip; committed.
 
-### C13 — Lovelace card
-- [ ] `subtracker/card`: Lit card (Dockerfile already expects it: `docker build` fails until this lands) reading `sensor.subtracker_*` (upcoming list, monthly total, tap → panel), config editor
-- [ ] Copied to `/config/www` on start when option enabled
-- **Gate:** card builds; renders in HA devcontainer.
+### C13 — Lovelace card  ✅ code done (in-HA render pending your HA, see C14)
+- [x] `subtracker/card`: Lit card (Vite lib build, one 24 KB ES module) reading `sensor.subtracker_monthly_total` and `sensor.subtracker_next_deadline`: monthly total + count, upcoming list with urgency dots, empty and "sensors not found" states; config `title`, `show_total`, `max_items` (1–20, validated), `panel_path`; visual editor via `getConfigForm`; registered in the card picker
+- [x] Tap opens the add-on panel using `panel_url` published in the total sensor (no slug guessing) + HA `location-changed` navigation
+- [x] Copied to `/homeassistant/www` (= `/config/www`) on start when `install_lovelace_card` is on (checked in the container)
+- [x] Render check in the browser with a stand-in `ha-card` and fake states: all three states, config validation, card size, picker registration, tap path
+- [ ] Render inside a real Home Assistant dashboard
+- **Gate:** card builds; renders with HA-shaped data; real-HA render pending.
 
 ### C14 — Packaging & release
-- [ ] Local `docker build` for amd64 passes
-- [ ] `DOCS.md` (install, options, card resource, AI providers, privacy), `CHANGELOG.md`, icon/logo
-- [ ] Devcontainer run: Ingress panel works, sensors, persistent notification
-- [ ] Push to GitHub (on your OK), install on real HA box
+- [x] Local `docker build` (amd64, HA base python 3.12) passes; container smoke test: migrations from empty `/data`, IE catalog loads, API + SPA served, card copied
+- [x] Found + fixed in the container: s6 in the HA base image hid `SUPERVISOR_TOKEN` from `run.sh`, so the app ran in dev mode (no HA calls, no Ingress check). `run.sh` now starts via `with-contenv`; spoofed identity header → 401 with a token set
+- [x] `DOCS.md` (install, roles, options, notifications, sensors, card, AI & privacy, data, troubleshooting), `CHANGELOG.md`, `icon.png` (128²), `logo.png` (250×100)
+- [x] Repository/add-on URLs point to `github.com/cyberjithu/ha-subscription-tracker`
+- [ ] Devcontainer run: needs Home Assistant onboarding (creating the HA owner account) — your step
+- [ ] Push to GitHub (on your OK), install on real HA box: Ingress panel, sensors, persistent notification, mobile push, card render
 - **Gate:** add-on running on your HA; mobile push received.
 
 ### Later (not v1)

@@ -30,6 +30,7 @@ async def test_sensor_payloads(session, fake_ha):
     state, attrs = st["sensor.subtracker_3"]
     assert state == 39 and attrs["next_event"] == "notice_deadline" and attrs["notice_deadline"] == "2026-12-11"
     total, tattrs = st["sensor.subtracker_monthly_total"]
+    assert tattrs["panel_url"].startswith("/hassio/ingress/")
     assert total == 84 and tattrs["by_category"] == {"streaming": 24, "broadband": 60} and tattrs["unit_of_measurement"] == "EUR"
     nd, nattrs = st["sensor.subtracker_next_deadline"]
     assert nd == "2026-11-09" and nattrs["subscription"] == "Netflix" and nattrs["days"] == 7

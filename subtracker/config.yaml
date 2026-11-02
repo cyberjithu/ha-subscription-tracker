@@ -2,7 +2,7 @@ name: SubTracker
 version: "0.1.0"
 slug: subtracker
 description: Track household subscriptions, contracts, bills and medicines. AI finds better deals before renewal.
-url: https://github.com/jithin/ha-subscription-tracker
+url: https://github.com/cyberjithu/ha-subscription-tracker
 arch:
   - aarch64
   - amd64

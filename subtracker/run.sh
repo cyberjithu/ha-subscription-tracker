@@ -1,4 +1,5 @@
-#!/usr/bin/env sh
+#!/usr/bin/with-contenv sh
+# with-contenv: s6 in the HA base image hides container env (SUPERVISOR_TOKEN, TZ) from CMD otherwise
 set -e
 cd /opt/subtracker
 export SUBTRACKER_DATA=/data

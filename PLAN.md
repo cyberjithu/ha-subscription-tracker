@@ -118,13 +118,13 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - [x] Tests: visibility rules, viewer read-only, price history, medicine detail, upload limits
 - **Gate:** all tests green; manual curl create of each kind.
 
-### C3 — Schedule math + reminders + inbox
+### C3 — Schedule math + reminders + inbox  ✅ done
 - [x] `services/schedule.py` (renewal roll-forward, notice deadline, refill run-out, monthly cost, events)
 - [x] `services/notify.py` (owner-aware fan-out, mutes, quiet hours, dedupe), `services/ha.py`, `services/email_resend.py`
-- [ ] Tests for schedule: month-end, leap year, notice deadline, refill, usage-bill average
-- [ ] `services/jobs.py`: daily reminder job (fires on `reminder_days`, dedupe key), quiet-hours flush job (every 5 min)
-- [ ] Inbox API: list, mark read, mark all read
-- [ ] Tests: shared vs personal routing, muted category, quiet-hours delay then flush, Resend called with fake HTTP, dedupe
+- [x] Tests for schedule: month-end, leap year, notice deadline, refill, usage-bill average
+- [x] `services/reminders.py` + `services/jobs.py`: daily reminder job (per-user reminder-day override, personal → owner) (fires on `reminder_days`, dedupe key), quiet-hours flush job (every 5 min)
+- [x] Inbox API: list, mark read, mark all read
+- [x] Tests: shared vs personal routing, muted category, quiet-hours delay then flush, Resend called with fake HTTP, dedupe
 - **Gate:** tests green; dry-run job logs expected HA calls for seeded data.
 
 ### C4 — HA sensors

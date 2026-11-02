@@ -89,6 +89,8 @@ def list_subscriptions(scope: str = "all", category: str | None = None, kind: Ki
 def create_subscription(body: SubscriptionIn, user: UserProfile = Depends(writer),
                         session: Session = Depends(get_session)):
     sub = Subscription(**body.model_dump(exclude={"personal"}), owner_user_id=user.id if body.personal else None)
+    if sub.kind == Kind.refill and sub.reminder_days == [30, 14, 7, 1]:
+        sub.reminder_days = [3, 1]  # refill dates are short-range; the contract default makes no sense here
     session.add(sub)
     session.flush()
     if sub.price:

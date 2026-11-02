@@ -1,10 +1,11 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
-from .api import subscriptions
+from .api import inbox, subscriptions
 from .config import APP_DIR
 from .services import jobs
 
@@ -14,9 +15,12 @@ STATIC_DIR = APP_DIR / "static"
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    jobs.start()
+    run_jobs = not os.environ.get("SUBTRACKER_NO_JOBS")  # tests drive jobs directly
+    if run_jobs:
+        jobs.start()
     yield
-    jobs.stop()
+    if run_jobs:
+        jobs.stop()
 
 
 app = FastAPI(title="SubTracker", lifespan=lifespan)
@@ -29,6 +33,7 @@ def health() -> dict:
 
 
 api.include_router(subscriptions.router)
+api.include_router(inbox.router)
 app.include_router(api)
 
 

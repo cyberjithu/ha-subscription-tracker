@@ -58,7 +58,7 @@ async def deliver(user: UserProfile, title: str, body: str, link: str, ha: HACli
 
 async def notify(session: Session, *, key: str, title: str, body: str, category: str = "",
                  owner_user_id: str | None = None, link: str = "", now: datetime | None = None,
-                 ha: HAClient = default_ha) -> bool:
+                 persistent_id: str = "", ha: HAClient = default_ha) -> bool:
     """Send once per dedupe key. Returns False when the key was already sent."""
     if session.exec(select(InboxItem).where(InboxItem.key == key)).first():
         return False
@@ -75,7 +75,7 @@ async def notify(session: Session, *, key: str, title: str, body: str, category:
             await deliver(user, title, body, link, ha)
     if not users or any((u.channels or {}).get("persistent") for u in users):
         try:
-            await ha.persistent(title, body, f"subtracker_{key}")
+            await ha.persistent(title, body, f"subtracker_{persistent_id or key}")  # same id replaces, no duplicates
         except Exception:
             log.exception("Persistent notification failed")
     session.commit()

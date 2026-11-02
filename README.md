@@ -25,3 +25,18 @@ npm run dev        # Vite on :5173, proxies /api to :8099
 npm run build      # outputs to subtracker/app/static, served by FastAPI
 npm run gen:api    # regenerate TypeScript API types after backend changes
 ```
+
+## Building for a specific platform
+Home Assistant builds the add-on for its own architecture during install (bases in `subtracker/build.yaml`).
+To build one platform yourself, or publish ready-made images so devices don't have to build:
+
+```bash
+scripts/build.sh aarch64          # Raspberry Pi 4/5 and other 64-bit ARM
+scripts/build.sh amd64            # Intel/AMD machines and VMs
+scripts/build.sh all --push       # both, pushed to ghcr.io/cyberjithu/{arch}-subtracker
+```
+
+On GitHub: **Actions → Build add-on images → Run workflow**, then choose `all`, `aarch64` or `amd64`.
+Pushing a `v*` tag builds both. Once the images for a version are published (and public), add
+`image: ghcr.io/cyberjithu/{arch}-subtracker` to `subtracker/config.yaml`; Home Assistant then pulls the
+image for its architecture instead of building it on the device.

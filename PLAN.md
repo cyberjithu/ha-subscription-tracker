@@ -250,6 +250,8 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - [x] Found + fixed in the container: s6 in the HA base image hid `SUPERVISOR_TOKEN` from `run.sh`, so the app ran in dev mode (no HA calls, no Ingress check). `run.sh` now starts via `with-contenv`; spoofed identity header → 401 with a token set
 - [x] `DOCS.md` (install, roles, options, notifications, sensors, card, AI & privacy, data, troubleshooting), `CHANGELOG.md`, `icon.png` (128²), `logo.png` (250×100)
 - [x] Repository/add-on URLs point to `github.com/cyberjithu/ha-subscription-tracker`
+- [x] Per-platform builds: `scripts/build.sh <aarch64|amd64|all> [--push]` (base from `build.yaml`, HA labels; both platforms built and inspected locally) + GitHub workflow "Build add-on images" with a platform choice (and `v*` tags) publishing `ghcr.io/cyberjithu/{arch}-subtracker`
+- [ ] Publish images (run the workflow), make the GHCR packages public, then add `image:` to `config.yaml` so HA pulls instead of building on the Pi
 - [ ] Devcontainer run: needs Home Assistant onboarding (creating the HA owner account) — your step
 - [x] Public repo https://github.com/cyberjithu/ha-subscription-tracker (history checked first: no keys, no `.data`, no database); `repository.yaml` and add-on files readable by Home Assistant
 - [ ] Install on real HA box: Ingress panel, sensors, persistent notification, mobile push, card render

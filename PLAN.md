@@ -166,13 +166,16 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - [x] PLAN repo layout matches the real tree; C13 notes Docker build needs `card/`
 - **Gate:** full suite green; frontend builds; committed.
 
-### C7 — Frontend core screens
-- [ ] Subscriptions list (filters: category, owner, kind, status; upcoming deadline badges)
-- [ ] Create/edit form adapting to kind (fixed/contract/usage/refill), privacy toggles
-- [ ] Detail page: timeline of events, price history, bills, documents, "add to my list"/"make shared"
-- [ ] Medicines view (supply bar, run-out date, script expiry, DPS monthly total vs cap)
-- [ ] Inbox, Profile/preferences, Users admin
-- **Gate:** click-through of every screen with seeded data, no console errors.
+### C7 — Frontend core screens  ✅ done
+- [x] Backend: `GET /subscriptions/{id}/events` (timeline) and `GET /medicines` (supply, run-out, monthly total vs country DPS cap) + tests
+- [x] Subscriptions list (search; filters: list scope, type, category, status; sorted by next deadline; urgency badges; personal-owner badge)
+- [x] Create/edit form adapting to kind (fixed/contract/usage/refill), privacy toggles (usage, Eircode), reminder days, status; server 422 messages shown
+- [x] Detail page: stats, timeline of events, price history with change, bills (add/delete, cost recalculates), documents (upload/download/delete), "add to my list" / "share with household", delete with confirm
+- [x] Medicines view (supply bar, days left, run-out date, script expiry, monthly total vs DPS cap); "Add medicine" presets the refill type
+- [x] Inbox (unread dot, mark read, mark all read), Profile/preferences (display, theme, start page, date style, push service picker, channels, quiet hours, reminder-day override, muted categories), Users admin (role change, remove with confirm)
+- [x] Fixes from click-through: filter layout, badge wrapping, notice-deadline hint names the renewal, no notice card for medicines, no refetch 404s after delete, account link visible to viewers, switch/checkbox accessible names
+- Deviations: forms use plain React state + server validation (no react-hook-form/zod: not needed); UI language stays English (`language` field kept, not exposed); admins can see members' personal items (by design: admin = all items)
+- **Gate:** click-through of every screen with seeded data (desktop, phone 375px, light + dark), no unexplained console errors; tests green; committed.
 
 ### C8 — Country catalog
 - [ ] `catalogs/ie.yaml` researched (broadband, mobile, electricity, gas, bins, streaming, software) with URLs, switching info, `captured_at`, country settings (EUR, bonkers.ie/switcher.ie, ComReg/CRU, DPS cap)

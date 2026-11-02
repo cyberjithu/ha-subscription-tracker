@@ -4,36 +4,56 @@ import {
   BellIcon, BookOpenIcon, CircleUserIcon, LayoutDashboardIcon, PillIcon, ReceiptTextIcon, SettingsIcon,
   SparklesIcon, TagIcon, UsersIcon,
 } from "lucide-react";
+import type { JSX } from "react";
+
+type Page = () => JSX.Element | null;
 import { AppLayout } from "@/components/app-layout";
-import { Placeholder } from "@/components/placeholder";
+import { AdminOnly, Placeholder } from "@/components/placeholder";
+import { Inbox } from "@/pages/inbox";
+import { Medicines } from "@/pages/medicines";
+import { Profile } from "@/pages/profile";
+import { SubscriptionDetail } from "@/pages/subscription-detail";
+import { SubscriptionFormPage } from "@/pages/subscription-form";
+import { SubscriptionsList } from "@/pages/subscriptions-list";
+import { Users } from "@/pages/users";
 
 export type NavItem = {
   to: string;
   label: string;
   icon: LucideIcon;
   adminOnly?: boolean;
-  chunk: string; // build-plan chunk that delivers the page; shown until it lands
+  chunk: string; // build-plan chunk that delivers the page; a placeholder shows until it lands
+  page?: Page;
 };
 
 export const NAV: NavItem[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboardIcon, chunk: "C12" },
-  { to: "/subscriptions", label: "Subscriptions", icon: ReceiptTextIcon, chunk: "C7" },
-  { to: "/medicines", label: "Medicines", icon: PillIcon, chunk: "C7" },
+  { to: "/subscriptions", label: "Subscriptions", icon: ReceiptTextIcon, chunk: "C7", page: SubscriptionsList },
+  { to: "/medicines", label: "Medicines", icon: PillIcon, chunk: "C7", page: Medicines },
   { to: "/deals", label: "Deals", icon: TagIcon, chunk: "C11" },
   { to: "/catalog", label: "Catalog", icon: BookOpenIcon, chunk: "C8" },
   { to: "/suggestions", label: "Suggestions", icon: SparklesIcon, adminOnly: true, chunk: "C10" },
-  { to: "/inbox", label: "Inbox", icon: BellIcon, chunk: "C7" },
-  { to: "/users", label: "Users", icon: UsersIcon, adminOnly: true, chunk: "C7" },
+  { to: "/inbox", label: "Inbox", icon: BellIcon, chunk: "C7", page: Inbox },
+  { to: "/users", label: "Users", icon: UsersIcon, adminOnly: true, chunk: "C7", page: Users },
   { to: "/settings", label: "Settings", icon: SettingsIcon, adminOnly: true, chunk: "C9" },
-  { to: "/profile", label: "Profile", icon: CircleUserIcon, chunk: "C7" },
+  { to: "/profile", label: "Profile", icon: CircleUserIcon, chunk: "C7", page: Profile },
 ];
 
 const rootRoute = createRootRoute({ component: AppLayout });
 
-const pages = NAV.map((item) =>
-  createRoute({ getParentRoute: () => rootRoute, path: item.to, component: () => <Placeholder item={item} /> }),
-);
+const pages = NAV.map((item) => {
+  const Page = item.page;
+  const component = !Page ? () => <Placeholder item={item} />
+    : item.adminOnly ? () => <AdminOnly what={item.label}><Page /></AdminOnly> : Page;
+  return createRoute({ getParentRoute: () => rootRoute, path: item.to, component });
+});
+const sub = (path: string, component: Page) => createRoute({ getParentRoute: () => rootRoute, path, component });
+const extra = [
+  sub("/subscriptions/new", SubscriptionFormPage),
+  sub("/subscriptions/$id", SubscriptionDetail),
+  sub("/subscriptions/$id/edit", SubscriptionFormPage),
+];
 
 // Hash history: the Ingress URL prefix is per-session, so the document path must never change.
-export const router = createRouter({ routeTree: rootRoute.addChildren(pages), history: createHashHistory() });
+export const router = createRouter({ routeTree: rootRoute.addChildren([...pages, ...extra]), history: createHashHistory() });
 // shortcut: router not registered for type-safe paths (routes are generated from NAV); register once pages are real routes.

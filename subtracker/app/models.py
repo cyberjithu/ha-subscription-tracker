@@ -61,7 +61,7 @@ class UserPrefs(SQLModel):
     avatar_color: Pattern(r"^#[0-9a-fA-F]{6}$") = "#6366f1"
     theme: Pattern(r"^(ha|light|dark)$") = "ha"
     default_view: str = "dashboard"
-    date_format: str = "dd/MM/yyyy"
+    date_format: str = "en-IE"  # locale used for dates and money in the UI
     language: str = "en"
     push_service: Pattern(r"^(notify\.[a-z0-9_]+)?$") = ""  # e.g. notify.mobile_app_pixel
     email: Pattern(r"^([^@\s]+@[^@\s]+\.[^@\s]+)?$") = ""

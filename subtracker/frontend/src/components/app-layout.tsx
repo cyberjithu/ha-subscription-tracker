@@ -1,4 +1,4 @@
-import { Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { Link, Outlet, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { CalendarSyncIcon, MenuIcon, MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -13,6 +13,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Toaster } from "@/components/ui/sonner";
 import { api, unwrap, useInbox, useMe } from "@/lib/api";
+import { setLocale } from "@/lib/format";
 import { watchTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { NAV } from "@/router";
@@ -132,6 +133,16 @@ function UserMenu({ pref, setPref }: { pref: string; setPref: (p: string) => voi
 
 export function AppLayout() {
   const [pref, setPref] = useThemePref();
+  const me = useMe();
+  const navigate = useNavigate();
+  const router = useRouter();
+  if (me.data) setLocale(me.data.date_format); // before children render dates
+  useEffect(() => {
+    // honour the profile's start page once, when the app opens on the root
+    const view = me.data?.default_view;
+    if (view && view !== "dashboard" && router.state.location.pathname === "/") navigate({ to: `/${view}` });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [me.data?.id]);
   const [open, setOpen] = useState(false);
   useEffect(() => {
     // the mobile sheet must not linger when the window widens to the desktop layout

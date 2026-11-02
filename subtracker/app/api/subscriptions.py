@@ -32,6 +32,10 @@ class NextEvent(SQLModel):
     days: int
 
 
+class EventOut(NextEvent):
+    title: str
+
+
 class SubscriptionOut(SubscriptionBase):
     id: int
     owner_user_id: str | None
@@ -145,6 +149,14 @@ def make_shared(sub_id: int, user: UserProfile = Depends(writer), session: Sessi
     session.commit()
     session.refresh(sub)
     return to_out(session, sub)
+
+
+@router.get("/{sub_id}/events", response_model=list[EventOut])
+def list_events(sub_id: int, user: UserProfile = Depends(current_user), session: Session = Depends(get_session)):
+    sub = get_visible(session, sub_id, user)
+    today = date.today()
+    events = schedule.upcoming_events(sub, session.get(MedicineDetail, sub.id), today)
+    return [EventOut(kind=e.kind, date=e.date, days=e.days_from(today), title=e.title) for e in events if e.date >= today]
 
 
 @router.get("/{sub_id}/prices", response_model=list[PriceChange])

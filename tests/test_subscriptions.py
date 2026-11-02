@@ -151,3 +151,26 @@ def test_bill_update(api):
     assert api.put(f"{url}/{b['id']}", json=body | {"period_end": "2025-12-01"}, headers=ALICE).status_code == 422
     assert api.put(f"/api/subscriptions/{other['id']}/bills/{b['id']}", json=body, headers=ALICE).status_code == 404
     assert api.put(f"{url}/{b['id']}", json=body, headers=VIEWER).status_code == 403
+
+
+def test_events_endpoint(api):
+    s = create(api, kind="contract", contract_end="2099-03-01", notice_days=30, next_renewal=None)
+    kinds = [e["kind"] for e in api.get(f"/api/subscriptions/{s['id']}/events", headers=ALICE).json()]
+    assert kinds == ["notice_deadline", "contract_end"]
+
+
+def test_medicines_overview(api, session):
+    from app.models import Country
+    session.add(Country(code="IE", name="Ireland", settings={"dps_monthly_cap": 80}))
+    session.commit()
+    m = create(api, name="Statin", category="medicine", kind="refill", price=0)
+    api.put(f"/api/subscriptions/{m['id']}/medicine",
+            json={"qty_on_hand": 10, "daily_dose": 2, "pack_size": 28, "cost_per_fill": 28}, headers=ALICE)
+    create(api, name="Hidden", category="medicine", kind="refill", price=0, personal=True, )
+    create(api)  # not a medicine
+    out = api.get("/api/medicines", headers=ALICE).json()
+    assert [i["subscription"]["name"] for i in out["items"]] == ["Hidden", "Statin"]
+    statin = out["items"][1]
+    assert statin["remaining"] == 10 and statin["days_left"] == 5
+    assert out["monthly_cap"] == 80 and out["monthly_total"] == round(28 * 2 * 365.25 / 12 / 28, 2)
+    assert [i["subscription"]["name"] for i in api.get("/api/medicines", headers=BOB).json()["items"]] == ["Statin"]

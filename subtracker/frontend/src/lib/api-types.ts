@@ -92,6 +92,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/subscriptions/{sub_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Events */
+        get: operations["list_events_api_subscriptions__sub_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/subscriptions/{sub_id}/prices": {
         parameters: {
             query?: never;
@@ -244,6 +261,23 @@ export interface paths {
         put?: never;
         /** Mark All Read */
         post: operations["mark_all_read_api_inbox_read_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/medicines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Medicines */
+        get: operations["medicines_api_medicines_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -447,6 +481,20 @@ export interface components {
              */
             uploaded_at?: string;
         };
+        /** EventOut */
+        EventOut: {
+            /** Kind */
+            kind: string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Days */
+            days: number;
+            /** Title */
+            title: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -519,7 +567,7 @@ export interface components {
             default_view: string;
             /**
              * Date Format
-             * @default dd/MM/yyyy
+             * @default en-IE
              */
             date_format: string;
             /**
@@ -634,6 +682,28 @@ export interface components {
             cost_per_fill: number;
             /** Subscription Id */
             subscription_id: number;
+        };
+        /** MedicineRow */
+        MedicineRow: {
+            subscription: components["schemas"]["SubscriptionOut"];
+            medicine: components["schemas"]["MedicineDetail"];
+            /** Remaining */
+            remaining: number;
+            /** Days Left */
+            days_left: number | null;
+            /** Run Out */
+            run_out: string | null;
+        };
+        /** MedicinesOut */
+        MedicinesOut: {
+            /** Items */
+            items: components["schemas"]["MedicineRow"][];
+            /** Monthly Total */
+            monthly_total: number;
+            /** Monthly Cap */
+            monthly_cap: number | null;
+            /** Currency */
+            currency: string;
         };
         /** NextEvent */
         NextEvent: {
@@ -983,7 +1053,7 @@ export interface components {
             default_view: string;
             /**
              * Date Format
-             * @default dd/MM/yyyy
+             * @default en-IE
              */
             date_format: string;
             /**
@@ -1279,6 +1349,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_events_api_subscriptions__sub_id__events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventOut"][];
                 };
             };
             /** @description Validation Error */
@@ -1726,6 +1827,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    medicines_api_medicines_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MedicinesOut"];
+                };
             };
         };
     };

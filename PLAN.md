@@ -195,6 +195,7 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - [x] Tests (10): JSON extraction, schema mismatch, unsupported attachments, URL dropping, Anthropic pause/refusal/web-search/fallbacks via fake client, OpenAI tools/attachments, Ollama via mock transport, HA AI Task, provider factory, endpoint roles and results
 - [x] Real request to the Anthropic API with an invalid key returns "Anthropic rejected the API key" in the UI; settings response contains no secrets
 - [ ] Live successful call with a real key (needs your key in the add-on options; the request body itself has not been accepted by a live API yet)
+  - 2026-11-02: OpenAI key tested via `.data/options.json`: key accepted, account returned `429 You have no credits remaining`; the app showed that message. Retry after adding credit (or with an Anthropic key).
 - Deviation: Ollama page-text helper moves to C11, where deal search needs it
 - **Gate:** tests green (77); test button works end to end; committed.
 

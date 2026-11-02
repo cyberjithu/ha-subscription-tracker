@@ -101,12 +101,12 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - [x] `.devcontainer.json` (HA add-on devcontainer)
 - **Gate:** `pytest` runs (0 tests OK), first commit made.
 
-### C1 — Data layer + app boot + auth
+### C1 — Data layer + app boot + auth  ✅ done
 - [x] `app/config.py` (options.json + env overrides), `app/db.py`, `app/models.py` (all tables)
-- [ ] Alembic setup (`alembic.ini`, `migrations/env.py`) + initial migration generated from models
-- [ ] `app/main.py`: FastAPI, `/api/health`, SPA static serving with Ingress-safe relative paths, startup runs scheduler
-- [ ] `app/auth.py`: user from `X-Remote-User-Id/Name/Display-Name`; auto-create UserProfile; first user = admin; `require_role()` dependency; dev fallback user when not under Supervisor
-- [ ] Tests: header → profile created; first admin; viewer blocked on write route
+- [x] Alembic setup (`alembic.ini`, `migrations/env.py`) + initial migration generated from models
+- [x] `app/main.py`: FastAPI, `/api/health`, SPA static serving with Ingress-safe relative paths, startup runs scheduler
+- [x] `app/auth.py`: user from `X-Remote-User-Id/Name/Display-Name`; auto-create UserProfile; first user = admin; `require_role()` dependency; dev fallback user when not under Supervisor
+- [x] Tests: header → profile created; first admin; viewer blocked on write route
 - **Gate:** `alembic upgrade head` on empty DB works; `uvicorn` starts; `/api/health` 200; auth tests green.
 
 ### C2 — Subscriptions API (all 4 kinds)

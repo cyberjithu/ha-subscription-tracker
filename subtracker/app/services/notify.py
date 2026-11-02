@@ -1,7 +1,7 @@
 """Fan-out of one alert to every recipient's chosen channels, honouring ownership, mutes and quiet hours."""
 import logging
 import os
-from datetime import datetime, time, timedelta
+from datetime import UTC, datetime, time, timedelta
 
 from sqlmodel import Session, select
 
@@ -29,8 +29,8 @@ def quiet_until(user: UserProfile, now: datetime) -> datetime | None:
     inside = start <= t < end if start <= end else (t >= start or t < end)  # window may cross midnight
     if not inside:
         return None
-    until = datetime.combine(now.date(), end)
-    return until if until > now else until + timedelta(days=1)
+    until = datetime.combine(now.date(), end, tzinfo=now.tzinfo)
+    return (until if until > now else until + timedelta(days=1)).astimezone(UTC)
 
 
 def recipients(session: Session, owner_user_id: str | None, category: str) -> list[UserProfile]:
@@ -62,7 +62,7 @@ async def notify(session: Session, *, key: str, title: str, body: str, category:
     """Send once per dedupe key. Returns False when the key was already sent."""
     if session.exec(select(InboxItem).where(InboxItem.key == key)).first():
         return False
-    now = now or datetime.now()
+    now = now or datetime.now().astimezone()  # local time: quiet hours are wall-clock
     users = recipients(session, owner_user_id, category)
     if not users:  # nobody has opened the panel yet: keep a household inbox entry
         session.add(InboxItem(user_id=owner_user_id, key=key, title=title, body=body, link=link))
@@ -83,7 +83,7 @@ async def notify(session: Session, *, key: str, title: str, body: str, category:
 
 
 async def flush_pending(session: Session, now: datetime | None = None, ha: HAClient = default_ha) -> int:
-    now = now or datetime.now()
+    now = (now or datetime.now(UTC)).astimezone(UTC)
     due = session.exec(select(PendingDelivery).where(PendingDelivery.not_before <= now)).all()
     for p in due:
         if user := session.get(UserProfile, p.user_id):

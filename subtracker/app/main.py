@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
-from .api import inbox, subscriptions
+from .api import inbox, subscriptions, users
 from .config import APP_DIR
 from .services import jobs
 
@@ -34,6 +34,7 @@ def health() -> dict:
 
 api.include_router(subscriptions.router)
 api.include_router(inbox.router)
+api.include_router(users.router)
 app.include_router(api)
 
 

@@ -132,11 +132,11 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - [x] Tests with FakeHA: entity ids, state, attributes
 - **Gate:** tests green.
 
-### C5 — Users & preferences API
-- [ ] `/api/me` get/put (profile, display, channels, quiet hours, reminder override, muted categories)
-- [ ] `/api/users` (admin: list, change role, remove), list HA `notify.*` services for picker
-- [ ] `/api/settings` (admin: read effective options, AI provider status — no secrets returned)
-- [ ] Tests: member cannot change roles; secrets never in response
+### C5 — Users & preferences API  ✅ done
+- [x] `/api/me` get/put (profile, display, channels, quiet hours, reminder override, muted categories)
+- [x] `/api/users` (admin: list, change role, remove), list HA `notify.*` services for picker
+- [x] `/api/settings` (admin: read effective options, AI provider status — no secrets returned)
+- [x] Tests: member cannot change roles; secrets never in response
 - **Gate:** tests green.
 
 ### C6 — Frontend shell

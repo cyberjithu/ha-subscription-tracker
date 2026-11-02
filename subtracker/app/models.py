@@ -1,6 +1,8 @@
 from datetime import UTC, date, datetime
 from enum import StrEnum
-from typing import Any
+from typing import Annotated, Any
+
+from pydantic import StringConstraints
 
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
@@ -42,22 +44,33 @@ class SubStatus(StrEnum):
     cancelled = "cancelled"
 
 
-class UserProfile(SQLModel, table=True):
-    id: str = Field(primary_key=True)  # HA user id from Ingress header
-    display_name: str = ""
-    role: Role = Role.member
-    avatar_color: str = "#6366f1"
-    theme: str = "ha"  # ha | light | dark
+def Pattern(regex: str) -> Any:
+    return Annotated[str, StringConstraints(pattern=regex)]
+
+
+HHMM = Pattern(r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+class UserPrefs(SQLModel):
+    """Fields a user may edit on their own profile."""
+    display_name: str = Field(default="", max_length=80)
+    avatar_color: Pattern(r"^#[0-9a-fA-F]{6}$") = "#6366f1"
+    theme: Pattern(r"^(ha|light|dark)$") = "ha"
     default_view: str = "dashboard"
     date_format: str = "dd/MM/yyyy"
     language: str = "en"
-    push_service: str = ""  # e.g. notify.mobile_app_pixel
-    email: str = ""
+    push_service: Pattern(r"^(notify\.[a-z0-9_]+)?$") = ""  # e.g. notify.mobile_app_pixel
+    email: Pattern(r"^([^@\s]+@[^@\s]+\.[^@\s]+)?$") = ""
     channels: dict = json_col({"push": True, "persistent": True, "inbox": True, "email": False})
-    quiet_start: str | None = None  # "22:00"
-    quiet_end: str | None = None    # "07:30"
-    reminder_days: list | None = Field(default=None, sa_column=Column(JSON))
-    muted_categories: list = json_col([])
+    quiet_start: HHMM | None = None
+    quiet_end: HHMM | None = None
+    reminder_days: list[int] | None = Field(default=None, sa_column=Column(JSON))
+    muted_categories: list[str] = json_col([])
+
+
+class UserProfile(UserPrefs, table=True):
+    id: str = Field(primary_key=True)  # HA user id from Ingress header
+    role: Role = Role.member
     created_at: datetime = Field(default_factory=utcnow)
 
 

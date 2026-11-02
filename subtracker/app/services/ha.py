@@ -29,6 +29,14 @@ class HAClient:
             r.raise_for_status()
             return r.json() if r.content else None
 
+    async def get(self, path: str) -> Any:
+        if not self.live:
+            return None
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.get(f"{self.base_url}{path}", headers={"Authorization": f"Bearer {self.token}"})
+            r.raise_for_status()
+            return r.json()
+
     async def set_state(self, entity_id: str, state: Any, attributes: dict) -> None:
         await self._post(f"/states/{entity_id}", {"state": state, "attributes": attributes})
 

@@ -61,14 +61,12 @@ class UserProfile(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow)
 
 
-class Subscription(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    name: str
+class SubscriptionBase(SQLModel):
+    name: str = Field(min_length=1, max_length=120)
     category: str
     kind: Kind = Kind.fixed
     country: str = "IE"
     provider_id: int | None = Field(default=None, foreign_key="provider.id")
-    owner_user_id: str | None = Field(default=None, index=True)  # None = household shared
     plan_name: str = ""
     price: float = 0
     currency: str = "EUR"
@@ -89,6 +87,11 @@ class Subscription(SQLModel, table=True):
     account_url: str = ""
     notes: str = ""
     status: SubStatus = SubStatus.active
+
+
+class Subscription(SubscriptionBase, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    owner_user_id: str | None = Field(default=None, index=True)  # None = household shared
     created_at: datetime = Field(default_factory=utcnow)
 
 
@@ -99,9 +102,7 @@ class PriceChange(SQLModel, table=True):
     effective_date: date
 
 
-class Bill(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    subscription_id: int = Field(foreign_key="subscription.id", index=True)
+class BillBase(SQLModel):
     period_start: date
     period_end: date
     amount: float
@@ -109,8 +110,12 @@ class Bill(SQLModel, table=True):
     usage_unit: str = ""
 
 
-class MedicineDetail(SQLModel, table=True):
-    subscription_id: int = Field(foreign_key="subscription.id", primary_key=True)
+class Bill(BillBase, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    subscription_id: int = Field(foreign_key="subscription.id", index=True)
+
+
+class MedicineBase(SQLModel):
     qty_on_hand: float = 0
     qty_updated: date = Field(default_factory=date.today)
     daily_dose: float = 1
@@ -119,6 +124,10 @@ class MedicineDetail(SQLModel, table=True):
     script_expiry: date | None = None
     pharmacy: str = ""
     cost_per_fill: float = 0
+
+
+class MedicineDetail(MedicineBase, table=True):
+    subscription_id: int = Field(foreign_key="subscription.id", primary_key=True)
 
 
 class Document(SQLModel, table=True):

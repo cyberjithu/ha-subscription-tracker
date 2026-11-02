@@ -109,13 +109,13 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - [x] Tests: header → profile created; first admin; viewer blocked on write route
 - **Gate:** `alembic upgrade head` on empty DB works; `uvicorn` starts; `/api/health` 200; auth tests green.
 
-### C2 — Subscriptions API (all 4 kinds)
-- [ ] CRUD `/api/subscriptions` with visibility (shared + own personal; admin sees all)
-- [ ] Price edit auto-writes `PriceChange`; `/api/subscriptions/{id}/prices`
-- [ ] "Add to my list" (copy as personal) + "Make shared" endpoints
-- [ ] Bills CRUD (usage kind), MedicineDetail get/put (refill kind)
-- [ ] Documents upload/download/delete (stored `/data/docs`, size + type limits)
-- [ ] Tests: visibility rules, viewer read-only, price history, medicine detail, upload limits
+### C2 — Subscriptions API (all 4 kinds)  ✅ done
+- [x] CRUD `/api/subscriptions` with visibility (shared + own personal; admin sees all)
+- [x] Price edit auto-writes `PriceChange`; `/api/subscriptions/{id}/prices`
+- [x] "Add to my list" (copy as personal) + "Make shared" endpoints
+- [x] Bills CRUD (usage kind), MedicineDetail get/put (refill kind)
+- [x] Documents upload/download/delete (stored `/data/docs`, size + type limits)
+- [x] Tests: visibility rules, viewer read-only, price history, medicine detail, upload limits
 - **Gate:** all tests green; manual curl create of each kind.
 
 ### C3 — Schedule math + reminders + inbox

@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
+from .api import subscriptions
 from .config import APP_DIR
 from .services import jobs
 
@@ -27,6 +28,7 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+api.include_router(subscriptions.router)
 app.include_router(api)
 
 

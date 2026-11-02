@@ -211,13 +211,20 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - [ ] Live discovery run for IE/broadband with a working AI key
 - **Gate:** tests green (86); review flow verified in UI; committed.
 
-### C11 — Deal finder + bill prefill
-- [ ] Deal prompt builder respecting per-sub privacy toggles; prompt preview endpoint
-- [ ] Auto trigger at notice_deadline − `deal_search_lead_days` (once per term); skipped for refill/ai_disabled/categories with `ai_deals=false`
-- [ ] Deals API + UI (ranked offers, savings, source links, "mark switching")
-- [ ] Bill upload → AI extract → prefilled bill form (vision providers only)
-- [ ] Tests: privacy (no Eircode/usage unless toggled), medicines never sent, auto trigger fires once
-- **Gate:** tests green; manual deal search on a sample broadband sub returns offers.
+### C11 — Deal finder + bill prefill  ✅ done (live AI answer pending AI credit, as C9)
+- [x] `services/deals.py` prompt builder, field by field: category, country, current provider/plan, monthly + yearly cost, contract end, notice, catalog shortlist with price pages; usage (yearly + from bills) only with `ai_share_usage`, Eircode only with `ai_share_location`; never notes, account link, owner or medicines
+- [x] `GET /subscriptions/{id}/deal-preview` returns exactly what would be sent; shown in the UI under "Exactly what is sent"
+- [x] Auto trigger (daily 04:00): once when the decision date (notice deadline, else contract end / next renewal) is within `deal_search_lead_days`, at most every 90 days per subscription (monthly renewals don't search monthly); skips medicines, AI switched off, `ai_deals=false` categories, non-active subs; notifies owner (personal) or household with the best saving
+- [x] Ollama/no-web-search backends get the text of up to 5 catalog price pages (moved here from C9)
+- [x] Offers ranked by yearly cost, saving computed against current yearly cost when the AI leaves it out, non-https sources unlinked; AI failures stored on the search row with the message
+- [x] API: preview, search now (writers), history, `/deals` overview; bill extract (PDF/PNG/JPEG/WebP, vision backends only, same AI eligibility rules, nothing saved)
+- [x] UI: "Better deals" tab (preview, search now, offers table with savings and source links, earlier searches, latest-failure note that doesn't hide earlier offers, "I'm switching provider"); Deals page (soonest decision first, best saving); "Read bill" on documents → Bills tab prefilled for checking
+- [x] Model: `DealSearch.summary`, `current_annual_cost` (+ migration); deleting a subscription removes its deal searches
+- [x] Tests (11): nothing personal by default, usage/Eircode only when allowed, medicines/switched-off never sent, ranking/savings, stored failures, price-page fetching, auto once per window, 90-day gap, API roles/visibility, bill extract not saved and type/backend checks, cascade delete
+- [x] Browser: real search shows OpenAI 429 stored and displayed; offers UI checked with a canned demo answer through the real code; real "Read bill" request reached OpenAI (rejected my fake PDF as corrupted, so the attachment format is accepted)
+- [x] Fixes from click-through: newest failed search no longer hides earlier offers; detail page tab no longer leaks between subscriptions / honours `?tab=`; unknown tab falls back to Timeline; friendly AI name
+- [ ] Live deal search with a working AI key
+- **Gate:** tests green (97); flows verified in UI; committed.
 
 ### C12 — Cost dashboard
 - [ ] Dashboard API: monthly total, by category, by owner, 12-month trend (price history + bills), upcoming 30 days

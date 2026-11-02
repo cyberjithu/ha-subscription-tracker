@@ -510,6 +510,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/subscriptions/{sub_id}/deal-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview
+         * @description Exactly what would be sent, so people can check it before running a search.
+         */
+        get: operations["preview_api_subscriptions__sub_id__deal_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/subscriptions/{sub_id}/deals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** History */
+        get: operations["history_api_subscriptions__sub_id__deals_get"];
+        put?: never;
+        /** Search Now */
+        post: operations["search_now_api_subscriptions__sub_id__deals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/deals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Overview
+         * @description Every subscription that can be searched, with its latest search, soonest decision first.
+         */
+        get: operations["overview_api_deals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/subscriptions/{sub_id}/documents/{doc_id}/extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Extract Bill
+         * @description Read an uploaded bill with AI and return the fields for the bill form. Nothing is saved here.
+         */
+        post: operations["extract_bill_api_subscriptions__sub_id__documents__doc_id__extract_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me": {
         parameters: {
             query?: never;
@@ -691,6 +769,37 @@ export interface components {
              */
             usage_unit: string;
         };
+        /** BillExtract */
+        BillExtract: {
+            /**
+             * Provider
+             * @default
+             */
+            provider: string;
+            /**
+             * Plan Name
+             * @default
+             */
+            plan_name: string;
+            /** Period Start */
+            period_start?: string | null;
+            /** Period End */
+            period_end?: string | null;
+            /** Amount */
+            amount?: number | null;
+            /**
+             * Currency
+             * @default EUR
+             */
+            currency: string;
+            /** Usage Value */
+            usage_value?: number | null;
+            /**
+             * Usage Unit
+             * @default
+             */
+            usage_unit: string;
+        };
         /** Body_upload_document_api_subscriptions__sub_id__documents_post */
         Body_upload_document_api_subscriptions__sub_id__documents_post: {
             /** File */
@@ -741,6 +850,77 @@ export interface components {
          * @enum {string}
          */
         Cycle: "week" | "month" | "quarter" | "year" | "custom";
+        /** DealPreview */
+        DealPreview: {
+            /** Eligible */
+            eligible: boolean;
+            /** Reason */
+            reason: string | null;
+            /** Provider */
+            provider: string | null;
+            /** Web Search */
+            web_search: boolean;
+            /** Prompt */
+            prompt: string;
+        };
+        /** DealRow */
+        DealRow: {
+            /** Subscription Id */
+            subscription_id: number;
+            /** Name */
+            name: string;
+            /** Category */
+            category: string;
+            /** Decide By */
+            decide_by: string | null;
+            search: components["schemas"]["DealSearch"] | null;
+        };
+        /** DealSearch */
+        DealSearch: {
+            /** Id */
+            id?: number | null;
+            /** Subscription Id */
+            subscription_id: number;
+            /**
+             * Ran At
+             * Format: date-time
+             */
+            ran_at?: string;
+            /**
+             * Trigger
+             * @default manual
+             */
+            trigger: string;
+            /**
+             * Ai Provider
+             * @default
+             */
+            ai_provider: string;
+            /**
+             * Prompt
+             * @default
+             */
+            prompt: string;
+            /** Offers */
+            offers?: unknown[];
+            /**
+             * Summary
+             * @default
+             */
+            summary: string;
+            /** Current Annual Cost */
+            current_annual_cost?: number | null;
+            /**
+             * Status
+             * @default done
+             */
+            status: string;
+            /**
+             * Error
+             * @default
+             */
+            error: string;
+        };
         /** DiscoverIn */
         DiscoverIn: {
             /** Country */
@@ -2771,6 +2951,151 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_api_subscriptions__sub_id__deal_preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    history_api_subscriptions__sub_id__deals_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealSearch"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_now_api_subscriptions__sub_id__deals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealSearch"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overview_api_deals_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRow"][];
+                };
+            };
+        };
+    };
+    extract_bill_api_subscriptions__sub_id__documents__doc_id__extract_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub_id: number;
+                doc_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillExtract"];
                 };
             };
             /** @description Validation Error */

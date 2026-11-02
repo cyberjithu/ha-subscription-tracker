@@ -8,6 +8,7 @@ from sqlmodel import Session
 from ..config import get_options
 from ..db import engine
 from .ai.providers import get_provider
+from .deals import run_auto_deal_searches
 from .discovery import due_countries, run_discovery
 from .notify import flush_pending
 from .reminders import run_reminders
@@ -45,6 +46,15 @@ async def discovery_job() -> None:
             log.info("Provider discovery for %s: %s", codes, await run_discovery(session, ai, codes))
 
 
+async def deals_job() -> None:
+    opts = get_options()
+    ai = get_provider(opts)
+    if ai is None:
+        return
+    with Session(engine) as session:
+        log.info("Automatic deal searches run: %s", await run_auto_deal_searches(session, ai, opts.deal_search_lead_days))
+
+
 def start() -> None:
     if scheduler.running:
         return
@@ -55,6 +65,7 @@ def start() -> None:
                       replace_existing=True)
     # daily check; the interval itself is tracked per country, so add-on restarts don't reset it
     scheduler.add_job(discovery_job, "cron", hour=3, id="discovery", coalesce=True, replace_existing=True)
+    scheduler.add_job(deals_job, "cron", hour=4, id="deals", coalesce=True, replace_existing=True)
     scheduler.add_job(flush_job, "interval", minutes=5, id="flush", replace_existing=True)
     scheduler.start()
 

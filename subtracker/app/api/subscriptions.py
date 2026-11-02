@@ -11,7 +11,7 @@ from sqlmodel import Session, SQLModel, delete, or_, select
 from ..auth import current_user, writer
 from ..config import DATA_DIR
 from ..db import get_session
-from ..models import (Bill, BillBase, Document, Kind, MedicineBase, MedicineDetail, PriceChange, Role,
+from ..models import (Bill, BillBase, DealSearch, Document, Kind, MedicineBase, MedicineDetail, PriceChange, Role,
                       SubStatus, Subscription, SubscriptionBase, UserProfile)
 from ..services import schedule
 
@@ -128,7 +128,7 @@ def update_subscription(sub_id: int, body: SubscriptionBase, user: UserProfile =
 @router.delete("/{sub_id}", status_code=204)
 def delete_subscription(sub_id: int, user: UserProfile = Depends(writer), session: Session = Depends(get_session)):
     sub = get_visible(session, sub_id, user)
-    for table in (PriceChange, Bill, MedicineDetail, Document):
+    for table in (PriceChange, Bill, MedicineDetail, Document, DealSearch):
         session.exec(delete(table).where(table.subscription_id == sub.id))
     session.delete(sub)
     session.commit()

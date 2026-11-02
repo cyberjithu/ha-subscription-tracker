@@ -221,7 +221,9 @@ class DealSearch(SQLModel, table=True):
     trigger: str = "manual"  # manual | auto
     ai_provider: str = ""
     prompt: str = ""
-    offers: list = json_col([])
+    offers: list = json_col([])  # DealOffer dicts, cheapest first
+    summary: str = ""
+    current_annual_cost: float | None = None  # what the subscription costs now, for comparing offers
     status: str = "done"  # done | error
     error: str = ""
 

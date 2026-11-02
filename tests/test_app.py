@@ -23,7 +23,7 @@ def test_frontend_missing_is_503(client, tmp_path, monkeypatch):
 async def test_scheduler_registers_jobs():
     jobs.start()
     try:
-        assert {j.id for j in jobs.scheduler.get_jobs()} == {"reminders", "sensors", "flush", "discovery"}
+        assert {j.id for j in jobs.scheduler.get_jobs()} == {"reminders", "sensors", "flush", "discovery", "deals"}
     finally:
         jobs.scheduler.remove_all_jobs()  # don't let the immediate runs hit the test data dir
         jobs.stop()

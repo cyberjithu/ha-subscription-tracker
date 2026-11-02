@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "@tanstack/react-router";
+import { Link, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import {
-  CalendarClockIcon, CopyPlusIcon, DownloadIcon, ExternalLinkIcon, FileTextIcon, LockIcon, PencilIcon, Trash2Icon,
+  CalendarClockIcon, CopyPlusIcon, SparklesIcon, DownloadIcon, ExternalLinkIcon, FileTextIcon, LockIcon, PencilIcon, Trash2Icon,
   UploadIcon, UsersIcon,
 } from "lucide-react";
 import { type FormEvent, useRef, useState } from "react";
@@ -17,8 +17,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { type Schemas, type Sub, api, apiUrl, unwrap, useMe, useSubscription } from "@/lib/api";
+import { type Schemas, type Sub, api, apiUrl, unwrap, useMe, useSettings, useSubscription } from "@/lib/api";
 import { CYCLE_LABEL, EVENT_LABEL, KIND_LABEL, dateTime, day, errorText, inDays, money, urgency } from "@/lib/format";
+import { DealTab } from "@/pages/deal-tab";
 import { MedicineEditor } from "@/pages/medicine-editor";
 
 const addDays = (iso: string, n: number) => {
@@ -28,12 +29,21 @@ const addDays = (iso: string, n: number) => {
 };
 
 const path = (id: number) => ({ params: { path: { sub_id: id } } });
+const TABS = ["timeline", "medicine", "bills", "prices", "deals", "documents"];
 
 export function SubscriptionDetail() {
   const { id } = useParams({ strict: false }) as { id: string };
-  const subId = Number(id);
+  const search = useSearch({ strict: false }) as { tab?: string };
+  // remount per subscription and per requested tab, so tab state never leaks between pages
+  return <DetailPage key={`${id}:${search.tab ?? ""}`} subId={Number(id)} initialTab={search.tab} />;
+}
+
+function DetailPage({ subId, initialTab }: { subId: number; initialTab?: string }) {
   const sub = useSubscription(subId);
   const me = useMe();
+  const settings = useSettings();
+  const [tab, setTab] = useState(TABS.includes(initialTab ?? "") ? initialTab! : "timeline");
+  const [draft, setDraft] = useState<Schemas["BillBase"] | null>(null); // bill fields read from a document by AI
   if (sub.isPending) return null;
   if (sub.isError) return <p className="text-sm text-destructive">{errorText(sub.error)}</p>;
   const s = sub.data;
@@ -65,19 +75,24 @@ export function SubscriptionDetail() {
             ? `${s.notice_days} days' notice before ${day(addDays(s.notice_deadline, s.notice_days))}`
             : "Cancel any time"} />}
       </div>
-      <Tabs defaultValue="timeline">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="mb-2 flex-wrap">
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           {s.kind === "refill" && <TabsTrigger value="medicine">Medicine</TabsTrigger>}
           {s.kind === "usage" && <TabsTrigger value="bills">Bills</TabsTrigger>}
           {s.kind !== "refill" && <TabsTrigger value="prices">Price history</TabsTrigger>}
+          {s.kind !== "refill" && <TabsTrigger value="deals">Better deals</TabsTrigger>}
           <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
         <TabsContent value="timeline"><Timeline s={s} /></TabsContent>
         {s.kind === "refill" && <TabsContent value="medicine"><MedicineEditor subId={s.id} canEdit={canEdit} /></TabsContent>}
-        {s.kind === "usage" && <TabsContent value="bills"><Bills s={s} canEdit={canEdit} /></TabsContent>}
+        {s.kind === "usage" && <TabsContent value="bills"><Bills key={JSON.stringify(draft)} s={s} canEdit={canEdit} draft={draft} /></TabsContent>}
         <TabsContent value="prices"><Prices s={s} /></TabsContent>
-        <TabsContent value="documents"><Documents subId={s.id} canEdit={canEdit} /></TabsContent>
+        {s.kind !== "refill" && <TabsContent value="deals"><DealTab s={s} canEdit={canEdit} /></TabsContent>}
+        <TabsContent value="documents">
+          <Documents subId={s.id} canEdit={canEdit}
+            onRead={s.kind === "usage" && s.ai_enabled && settings.data?.ai_ready ? (d) => { setDraft(d); setTab("bills"); } : undefined} />
+        </TabsContent>
       </Tabs>
     </>
   );
@@ -223,11 +238,11 @@ function Prices({ s }: { s: Sub }) {
 
 const BLANK_BILL: Schemas["BillBase"] = { period_start: "", period_end: "", amount: 0, usage_value: null, usage_unit: "" };
 
-function Bills({ s, canEdit }: { s: Sub; canEdit: boolean }) {
+function Bills({ s, canEdit, draft }: { s: Sub; canEdit: boolean; draft: Schemas["BillBase"] | null }) {
   const qc = useQueryClient();
   const key = ["subscriptions", s.id, "bills"];
   const bills = useQuery({ queryKey: key, queryFn: async () => unwrap(await api.GET("/api/subscriptions/{sub_id}/bills", path(s.id))) });
-  const [b, setB] = useState(BLANK_BILL);
+  const [b, setB] = useState(draft ?? BLANK_BILL);
   const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: key }), qc.invalidateQueries({ queryKey: ["subscriptions"] })]);
   const add = useMutation({
     mutationFn: async () => unwrap(await api.POST("/api/subscriptions/{sub_id}/bills", { ...path(s.id), body: b })),
@@ -246,7 +261,7 @@ function Bills({ s, canEdit }: { s: Sub; canEdit: boolean }) {
     <div className="grid gap-4">
       {canEdit && (
         <Card>
-          <CardHeader><CardTitle>Add a bill</CardTitle><CardDescription>The monthly cost averages your bills by the days they cover.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Add a bill</CardTitle><CardDescription>{draft ? "Filled in from your document by AI: check every field before adding." : "The monthly cost averages your bills by the days they cover."}</CardDescription></CardHeader>
           <CardContent>
             <form onSubmit={submit} className="grid gap-3 sm:grid-cols-[repeat(4,1fr)_auto] sm:items-end">
               <Field label="From" htmlFor="bs"><Input id="bs" type="date" required value={b.period_start} onChange={(e) => setB({ ...b, period_start: e.target.value })} /></Field>
@@ -285,7 +300,7 @@ function Bills({ s, canEdit }: { s: Sub; canEdit: boolean }) {
   );
 }
 
-function Documents({ subId, canEdit }: { subId: number; canEdit: boolean }) {
+function Documents({ subId, canEdit, onRead }: { subId: number; canEdit: boolean; onRead?: (bill: Schemas["BillBase"]) => void }) {
   const qc = useQueryClient();
   const key = ["subscriptions", subId, "documents"];
   const docs = useQuery({ queryKey: key, queryFn: async () => unwrap(await api.GET("/api/subscriptions/{sub_id}/documents", path(subId))) });
@@ -305,6 +320,19 @@ function Documents({ subId, canEdit }: { subId: number; canEdit: boolean }) {
     } finally {
       setBusy(false);
       if (input.current) input.current.value = "";
+    }
+  };
+  const [reading, setReading] = useState<number | null>(null);
+  const read = async (docId: number) => {
+    setReading(docId);
+    try {
+      const x = unwrap(await api.POST("/api/subscriptions/{sub_id}/documents/{doc_id}/extract", { params: { path: { sub_id: subId, doc_id: docId } } }));
+      onRead?.({ period_start: x.period_start ?? "", period_end: x.period_end ?? "", amount: x.amount ?? 0,
+        usage_value: x.usage_value ?? null, usage_unit: x.usage_unit ?? "" });
+    } catch (e) {
+      toast.error(errorText(e));
+    } finally {
+      setReading(null);
     }
   };
   const del = useMutation({
@@ -337,6 +365,11 @@ function Documents({ subId, canEdit }: { subId: number; canEdit: boolean }) {
                   <p className="truncate text-sm font-medium">{d.filename}</p>
                   <p className="text-xs text-muted-foreground capitalize">{d.kind} · {dateTime(d.uploaded_at)}</p>
                 </div>
+                {onRead && canEdit && d.content_type !== "image/heic" && (
+                  <Button variant="outline" size="sm" disabled={reading !== null} onClick={() => read(d.id!)}>
+                    <SparklesIcon /> {reading === d.id ? "Reading…" : "Read bill"}
+                  </Button>
+                )}
                 <Button variant="ghost" size="icon" asChild>
                   <a href={apiUrl(`/api/subscriptions/${subId}/documents/${d.id}`)} aria-label={`Download ${d.filename}`}><DownloadIcon /></a>
                 </Button>

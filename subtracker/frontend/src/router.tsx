@@ -10,6 +10,7 @@ type Page = () => JSX.Element | null;
 import { AppLayout } from "@/components/app-layout";
 import { AdminOnly, Placeholder } from "@/components/placeholder";
 import { Catalog } from "@/pages/catalog";
+import { Deals } from "@/pages/deals";
 import { Inbox } from "@/pages/inbox";
 import { Medicines } from "@/pages/medicines";
 import { Profile } from "@/pages/profile";
@@ -33,7 +34,7 @@ export const NAV: NavItem[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboardIcon, chunk: "C12" },
   { to: "/subscriptions", label: "Subscriptions", icon: ReceiptTextIcon, chunk: "C7", page: SubscriptionsList },
   { to: "/medicines", label: "Medicines", icon: PillIcon, chunk: "C7", page: Medicines },
-  { to: "/deals", label: "Deals", icon: TagIcon, chunk: "C11" },
+  { to: "/deals", label: "Deals", icon: TagIcon, chunk: "C11", page: Deals },
   { to: "/catalog", label: "Catalog", icon: BookOpenIcon, chunk: "C8", page: Catalog },
   { to: "/suggestions", label: "Suggestions", icon: SparklesIcon, adminOnly: true, chunk: "C10", page: Suggestions },
   { to: "/inbox", label: "Inbox", icon: BellIcon, chunk: "C7", page: Inbox },

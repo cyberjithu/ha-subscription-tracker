@@ -246,6 +246,7 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 
 ### C14 — Packaging & release
 - [x] Local `docker build` (amd64, HA base python 3.12) passes; container smoke test: migrations from empty `/data`, IE catalog loads, API + SPA served, card copied
+- [x] `aarch64` (Raspberry Pi 4B, 64-bit HA OS) image built under emulation with the same base as `build.yaml` (no packages compiled from source) and smoke-tested as arm64: migrations, catalog, SPA, card copy, spoofed header → 401
 - [x] Found + fixed in the container: s6 in the HA base image hid `SUPERVISOR_TOKEN` from `run.sh`, so the app ran in dev mode (no HA calls, no Ingress check). `run.sh` now starts via `with-contenv`; spoofed identity header → 401 with a token set
 - [x] `DOCS.md` (install, roles, options, notifications, sensors, card, AI & privacy, data, troubleshooting), `CHANGELOG.md`, `icon.png` (128²), `logo.png` (250×100)
 - [x] Repository/add-on URLs point to `github.com/cyberjithu/ha-subscription-tracker`

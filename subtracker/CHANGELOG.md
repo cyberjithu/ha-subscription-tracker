@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0
+
+- Catalog: **Add** a provider to your subscriptions in one click. If you already track that category you can replace
+  one (it is marked cancelled, history kept) or keep both, e.g. for a second internet connection.
+- Germany provider catalog (internet, mobile, electricity, gas, streaming, software, Rundfunkbeitrag).
+- Settings → Country: choose the household country from every available catalog, or add your own country.
+  Replaces the `countries` add-on option.
+- Settings → AI assistant: choose the AI provider and model and enter API keys in the panel. Keys are stored
+  encrypted and never shown again.
+- Fix: the add-on now receives Home Assistant's token inside the container (sensors, notifications and the
+  sidebar-only access check work).
+
 ## 0.1.0
 
 First release.

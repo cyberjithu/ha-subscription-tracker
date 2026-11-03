@@ -257,8 +257,17 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - [ ] Install on real HA box: Ingress panel, sensors, persistent notification, mobile push, card render
 - **Gate:** add-on running on your HA; mobile push received.
 
+### C15 — Germany + household country  ✅ done
+- [x] `catalogs/de.yaml`: 38 providers (internet, mobile, electricity, gas, streaming, software) + Rundfunkbeitrag as a fixed broadcast fee (no deal search); TKG 1-month notice after minimum term, energy switching rules, Check24/Verivox, Bundesnetzagentur, Zuzahlung note for medicines; URLs checked live; no bin companies (municipal collection)
+- [x] Household country stored in the app (`AppSetting`, migration), replacing the `countries` add-on option; default Ireland, else first catalog
+- [x] Settings → Country dropdown: every loaded catalog appears automatically (built-in or custom, with provider counts); "Other country…" creates a custom empty country to fill by hand, import or AI suggestions
+- [x] Country drives: catalog/suggestions default, new-subscription country and currency, discovery job, medicines note (country-neutral prescription cap wording; IE DPS note, DE Zuzahlung note)
+- [x] Catalog: only categories that exist in the country as filters; duplicate regulators shown once
+- [x] Tests: every bundled catalog validated (parametrised), country specifics, household default/choice, choose/add country API (roles, validation, 404/409), medicines note
+- **Gate:** tests green (106); Germany chosen and shown in the browser; committed.
+
 ### Later (not v1)
-- [ ] `catalogs/de.yaml`, `catalogs/fr.yaml`
+- [ ] `catalogs/fr.yaml
 - [ ] Actionable notification responses via HA websocket
 
 ## Verification

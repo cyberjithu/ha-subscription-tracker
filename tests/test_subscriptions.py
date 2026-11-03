@@ -174,3 +174,12 @@ def test_medicines_overview(api, session):
     assert statin["remaining"] == 10 and statin["days_left"] == 5
     assert out["monthly_cap"] == 80 and out["monthly_total"] == round(28 * 2 * 365.25 / 12 / 28, 2)
     assert [i["subscription"]["name"] for i in api.get("/api/medicines", headers=BOB).json()["items"]] == ["Statin"]
+
+
+def test_medicines_note_follows_household_country(api, session):
+    from app.models import AppSetting, Country
+    session.add(Country(code="DE", name="Germany", settings={"medicine_note": "Zuzahlung 5-10 EUR"}))
+    session.add(AppSetting(key="country", value={"code": "DE"}))
+    session.commit()
+    out = api.get("/api/medicines", headers=ALICE).json()
+    assert out["monthly_cap"] is None and out["scheme_note"] == "Zuzahlung 5-10 EUR"

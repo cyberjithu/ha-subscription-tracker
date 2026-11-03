@@ -32,7 +32,6 @@ Assistant sensors or bell notifications, because those are visible to every Home
 | `openai_api_key`, `openai_model` | `gpt-5` | OpenAI, with web search |
 | `ollama_url`, `ollama_model` | `llama3.1` | A local model; no web search, it reads the catalog's price pages instead |
 | `ha_ai_task_entity` | | The AI Task entity configured in Home Assistant (leave empty for HA's default) |
-| `countries` | `IE` | Countries whose provider catalog is used |
 | `discovery_interval_days` | `30` | How often the AI looks for providers missing from the catalog (`0` = off) |
 | `deal_search_lead_days` | `45` | How many days before a notice deadline the automatic deal search runs |
 | `resend_api_key`, `resend_from` | | Send email reminders through [Resend](https://resend.com) |

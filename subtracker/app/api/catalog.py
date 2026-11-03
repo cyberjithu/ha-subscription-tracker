@@ -4,9 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
+from typing import Annotated
+
+from pydantic import Field as PField
 from sqlmodel import Session, SQLModel, select
 
 from ..auth import admin_only, current_user
+from ..config import CATALOG_DIR
 from ..db import get_session
 from ..models import Category, Country, Provider, ProviderBase, UserProfile
 from ..services import catalog
@@ -22,9 +26,41 @@ class CountrySettingsIn(SQLModel):
     settings: dict
 
 
-@router.get("/countries", response_model=list[Country])
+class CountryIn(SQLModel):
+    code: Annotated[str, PField(pattern=r"^[A-Z]{2}$")]
+    name: Annotated[str, PField(min_length=2, max_length=60)]
+    currency: Annotated[str, PField(pattern=r"^[A-Z]{3}$")] = "EUR"
+
+
+class CountryOut(SQLModel):
+    code: str
+    name: str
+    currency: str
+    settings: dict
+    provider_count: int
+    builtin: bool  # ships with the add-on (a catalogs/<code>.yaml exists)
+
+
+@router.get("/countries", response_model=list[CountryOut])
 def countries(_: UserProfile = Depends(current_user), session: Session = Depends(get_session)):
-    return session.exec(select(Country).order_by(Country.code)).all()
+    """Every country with a catalog: bundled ones appear on their own once their YAML ships, custom ones once added."""
+    out = []
+    for c in session.exec(select(Country).order_by(Country.name)):
+        count = len(session.exec(select(Provider.id).where(Provider.country == c.code, Provider.hidden.is_(False))).all())
+        out.append(CountryOut(**c.model_dump(), provider_count=count, builtin=(CATALOG_DIR / f"{c.code.lower()}.yaml").exists()))
+    return out
+
+
+@router.post("/countries", response_model=Country, status_code=201)
+def add_country(body: CountryIn, _: UserProfile = Depends(admin_only), session: Session = Depends(get_session)):
+    """A country without a bundled catalog: starts empty, filled by hand, by import or by AI suggestions."""
+    if session.get(Country, body.code):
+        raise HTTPException(409, f"{body.code} already exists")
+    country = Country(code=body.code, name=body.name, currency=body.currency, settings={})
+    session.add(country)
+    session.commit()
+    session.refresh(country)
+    return country
 
 
 @router.put("/countries/{code}", response_model=Country)

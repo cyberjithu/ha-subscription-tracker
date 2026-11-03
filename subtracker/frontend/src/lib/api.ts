@@ -29,7 +29,7 @@ export const useMe = () =>
 export type Settings = {
   ai_provider: string;
   ai_ready: boolean;
-  countries: string[];
+  country: string; // household country code
   ha_connected: boolean;
   options?: Record<string, unknown>;
 };

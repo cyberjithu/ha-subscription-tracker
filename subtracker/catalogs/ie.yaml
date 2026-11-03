@@ -13,6 +13,7 @@ country:
   settings:
     dps_monthly_cap: 80 # Drug Payment Scheme: max household spend on prescriptions per calendar month (EUR)
     dps_url: https://www.mydps.ie/
+    medicine_note: Register for the Drug Payment Scheme (DPS) at mydps.ie and a household pays at most the monthly cap for approved prescriptions.
     switch_sites:
       - name: bonkers.ie
         url: https://www.bonkers.ie/

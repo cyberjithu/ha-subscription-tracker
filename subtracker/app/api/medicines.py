@@ -8,6 +8,7 @@ from ..auth import current_user
 from ..db import get_session
 from ..models import Country, Kind, MedicineDetail, SubStatus, Subscription, UserProfile
 from ..services import schedule
+from ..services.catalog import household_country
 from .subscriptions import SubscriptionOut, to_out, visible_query
 
 router = APIRouter(prefix="/medicines", tags=["medicines"])
@@ -25,6 +26,7 @@ class MedicinesOut(SQLModel):
     items: list[MedicineRow]
     monthly_total: float
     monthly_cap: float | None  # country scheme cap (IE: Drug Payment Scheme), from the country catalog
+    scheme_note: str  # how prescription costs work in the household's country, when there is no monthly cap
     currency: str
 
 
@@ -39,7 +41,8 @@ def medicines(user: UserProfile = Depends(current_user), session: Session = Depe
         items.append(MedicineRow(subscription=to_out(session, sub, today), medicine=med,
                                  remaining=schedule.medicine_remaining(med, today),
                                  days_left=(run_out - today).days if run_out else None, run_out=run_out))
-    country = session.get(Country, items[0].subscription.country) if items else None
-    cap = (country.settings or {}).get("dps_monthly_cap") if country else None
+    country = session.get(Country, household_country(session))
+    settings = (country.settings or {}) if country else {}
     return MedicinesOut(items=items, monthly_total=round(sum(i.subscription.monthly_cost for i in items), 2),
-                        monthly_cap=cap, currency=items[0].subscription.currency if items else "EUR")
+                        monthly_cap=settings.get("dps_monthly_cap"), scheme_note=settings.get("medicine_note", ""),
+                        currency=country.currency if country else "EUR")

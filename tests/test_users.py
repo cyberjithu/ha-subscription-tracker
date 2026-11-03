@@ -44,7 +44,7 @@ def test_settings_never_returns_secrets(api, monkeypatch):
     opts = Options(ai_provider="anthropic", anthropic_api_key="sk-secret", resend_api_key="re-secret")
     monkeypatch.setattr(users_api, "get_options", lambda: opts)
     member = api.get("/api/settings", headers=MEMBER).json()
-    assert member == {"ai_provider": "anthropic", "ai_ready": True, "countries": ["IE"], "ha_connected": False}
+    assert member == {"ai_provider": "anthropic", "ai_ready": True, "country": "IE", "ha_connected": False}
     admin = api.get("/api/settings", headers=ADMIN)
     assert "secret" not in admin.text
     assert admin.json()["options"]["anthropic_api_key_set"] is True

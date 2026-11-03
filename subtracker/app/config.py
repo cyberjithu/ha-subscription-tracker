@@ -20,7 +20,6 @@ class Options(BaseModel):
     ollama_url: str = ""
     ollama_model: str = "llama3.1"
     ha_ai_task_entity: str = ""
-    countries: list[str] = ["IE"]
     discovery_interval_days: int = 30
     deal_search_lead_days: int = 45
     resend_api_key: str = ""
@@ -35,5 +34,5 @@ def get_options() -> Options:
     raw = json.loads(path.read_text()) if path.exists() else {}
     for key in Options.model_fields:
         if (env := os.environ.get(f"SUBTRACKER_{key.upper()}")) is not None:
-            raw[key] = env.split(",") if key == "countries" else env
+            raw[key] = env
     return Options(**raw)

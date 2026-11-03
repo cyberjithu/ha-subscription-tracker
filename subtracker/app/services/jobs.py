@@ -7,6 +7,7 @@ from sqlmodel import Session
 
 from ..config import get_options
 from ..db import engine
+from . import catalog
 from .ai.providers import get_provider
 from .deals import run_auto_deal_searches
 from .discovery import due_countries, run_discovery
@@ -42,7 +43,7 @@ async def discovery_job() -> None:
     if ai is None:
         return
     with Session(engine) as session:
-        if codes := due_countries(session, opts.countries, opts.discovery_interval_days):
+        if codes := due_countries(session, [catalog.household_country(session)], opts.discovery_interval_days):
             log.info("Provider discovery for %s: %s", codes, await run_discovery(session, ai, codes))
 
 

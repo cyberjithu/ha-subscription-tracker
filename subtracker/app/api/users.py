@@ -7,10 +7,11 @@ from sqlmodel import Session, SQLModel, select
 from ..auth import admin_only, current_user
 from ..config import get_options
 from ..db import get_session
-from ..models import Role, UserPrefs, UserProfile
+from ..models import Country, Role, UserPrefs, UserProfile
 from ..services.ai.base import AIError, AIRequest, ask
 from ..services.ai.providers import get_provider
 from ..services.ai.schemas import Ping
+from ..services import catalog
 from ..services.ha import ha
 
 router = APIRouter(tags=["users"])
@@ -27,6 +28,10 @@ class UserSummary(SQLModel):
     display_name: str
     avatar_color: str
     role: Role
+
+
+class CountryChoice(SQLModel):
+    code: str
 
 
 class RoleIn(SQLModel):
@@ -86,11 +91,11 @@ async def notify_services(_: UserProfile = Depends(current_user)):
 
 
 @router.get("/settings")
-def settings(user: UserProfile = Depends(current_user)) -> dict:
+def settings(user: UserProfile = Depends(current_user), session: Session = Depends(get_session)) -> dict:
     opts = get_options()
     provider = get_provider(opts)
     ai_ready = provider is not None and (provider.name != "ha_ai_task" or ha.live)
-    public = {"ai_provider": opts.ai_provider, "ai_ready": ai_ready, "countries": opts.countries,
+    public = {"ai_provider": opts.ai_provider, "ai_ready": ai_ready, "country": catalog.household_country(session),
               "ha_connected": ha.live}
     if user.role != Role.admin:
         return public
@@ -111,3 +116,12 @@ async def test_ai(_: UserProfile = Depends(admin_only)) -> dict:
     except AIError as e:
         return {"ok": False, "provider": provider.name, "detail": str(e)}
     return {"ok": True, "provider": provider.name, "detail": "Connected", "ms": round((time.monotonic() - started) * 1000)}
+
+
+@router.put("/settings/country")
+def choose_country(body: CountryChoice, _: UserProfile = Depends(admin_only), session: Session = Depends(get_session)) -> dict:
+    """The household's country: default for new subscriptions, the catalog shown first, and where AI looks."""
+    if not session.get(Country, body.code):
+        raise HTTPException(404, "No catalog for this country yet. Add it as a custom country first.")
+    catalog.set_household_country(session, body.code)
+    return {"country": body.code}

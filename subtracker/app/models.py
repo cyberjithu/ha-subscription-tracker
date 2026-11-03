@@ -164,6 +164,12 @@ class Country(SQLModel, table=True):
     settings: dict = json_col({})
 
 
+class AppSetting(SQLModel, table=True):
+    """Household-wide settings changed in the app (add-on options are for things HA must know at start)."""
+    key: str = Field(primary_key=True)
+    value: dict = json_col({})
+
+
 class Category(SQLModel, table=True):
     slug: str = Field(primary_key=True)
     name: str

@@ -13,15 +13,26 @@ def providers(session):
     return {(p.category, p.slug): p for p in session.exec(select(Provider))}
 
 
-def test_bundled_ie_catalog_is_valid():
-    cat = catalog.parse(IE)
-    assert cat.country.code == "IE" and cat.country.settings["dps_monthly_cap"] == 80
+@pytest.mark.parametrize("path", sorted(CATALOG_DIR.glob("*.yaml")), ids=lambda p: p.name)
+def test_bundled_catalog_is_valid(path):
+    cat = catalog.parse(path.read_text())
+    assert cat.country.code == path.stem.upper()
     keys = [(p.category, p.slug) for p in cat.providers]
-    assert len(keys) == len(set(keys)), "duplicate provider in ie.yaml"
-    cats = {c.slug for c in cat.categories}
-    assert {p.category for p in cat.providers} <= cats
+    assert len(keys) == len(set(keys)), f"duplicate provider in {path.name}"
+    assert {p.category for p in cat.providers} <= {c.slug for c in cat.categories}
     assert all(p.url.startswith("https://") and p.pricing_url.startswith("https://") for p in cat.providers)
-    assert {"broadband", "electricity", "gas", "bins", "streaming"} <= {p.category for p in cat.providers}
+    assert {"broadband", "mobile", "electricity", "gas", "streaming"} <= {p.category for p in cat.providers}
+    medicine = next(c for c in cat.categories if c.slug == "medicine")
+    assert medicine.ai_deals is False  # medicines are never sent to AI, in every country
+
+
+def test_country_specifics():
+    ie = catalog.parse(IE)
+    assert ie.country.settings["dps_monthly_cap"] == 80
+    de = catalog.parse((CATALOG_DIR / "de.yaml").read_text())
+    assert "dps_monthly_cap" not in de.country.settings and "Zuzahlung" in de.country.settings["medicine_note"]
+    fee = next(c for c in de.categories if c.slug == "broadcast-fee")
+    assert fee.ai_deals is False
 
 
 def test_load_is_idempotent(session):
@@ -142,3 +153,34 @@ def test_country_settings_admin(api):
     assert api.put("/api/catalog/countries/IE", json={"settings": {"dps_monthly_cap": 90}}, headers=ADMIN).json()["settings"] == {"dps_monthly_cap": 90}
     assert api.put("/api/catalog/countries/IE", json={"settings": {"dps_monthly_cap": -1}}, headers=ADMIN).status_code == 422
     assert api.put("/api/catalog/countries/IE", json={"settings": {}}, headers=MEMBER).status_code == 403
+
+
+# --- household country ---
+
+def test_household_country_default_and_choice(session):
+    assert catalog.household_country(session) == "IE"  # nothing loaded yet: sensible default
+    for f in ("de.yaml", "ie.yaml"):
+        catalog.apply(session, catalog.parse((CATALOG_DIR / f).read_text()), bundled=True)
+    assert catalog.household_country(session) == "IE"
+    catalog.set_household_country(session, "DE")
+    assert catalog.household_country(session) == "DE"
+
+
+def test_choose_and_add_country_api(api, session):
+    catalog.apply(session, catalog.parse((CATALOG_DIR / "de.yaml").read_text()), bundled=True)
+    rows = {c["code"]: c for c in api.get("/api/catalog/countries", headers=MEMBER).json()}
+    assert rows["DE"]["builtin"] and rows["DE"]["provider_count"] > 30 and rows["IE"]["builtin"]
+    assert api.put("/api/settings/country", json={"code": "DE"}, headers=MEMBER).status_code == 403
+    assert api.put("/api/settings/country", json={"code": "FR"}, headers=ADMIN).status_code == 404
+    assert api.put("/api/settings/country", json={"code": "DE"}, headers=ADMIN).json() == {"country": "DE"}
+    assert api.get("/api/settings", headers=MEMBER).json()["country"] == "DE"
+    # a country with no bundled catalog: created empty, then selectable
+    for bad in ({"code": "fr", "name": "France"}, {"code": "FR", "name": "F"}, {"code": "FR", "name": "France", "currency": "eur"}):
+        assert api.post("/api/catalog/countries", json=bad, headers=ADMIN).status_code == 422, bad
+    assert api.post("/api/catalog/countries", json={"code": "FR", "name": "France"}, headers=MEMBER).status_code == 403
+    fr = api.post("/api/catalog/countries", json={"code": "FR", "name": "France"}, headers=ADMIN)
+    assert fr.status_code == 201 and fr.json()["currency"] == "EUR"
+    assert api.post("/api/catalog/countries", json={"code": "FR", "name": "France"}, headers=ADMIN).status_code == 409
+    rows = {c["code"]: c for c in api.get("/api/catalog/countries", headers=MEMBER).json()}
+    assert rows["FR"]["builtin"] is False and rows["FR"]["provider_count"] == 0
+    assert api.put("/api/settings/country", json={"code": "FR"}, headers=ADMIN).status_code == 200

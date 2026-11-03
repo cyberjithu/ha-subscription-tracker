@@ -291,10 +291,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Countries */
+        /**
+         * Countries
+         * @description Every country with a catalog: bundled ones appear on their own once their YAML ships, custom ones once added.
+         */
         get: operations["countries_api_catalog_countries_get"];
         put?: never;
-        post?: never;
+        /**
+         * Add Country
+         * @description A country without a bundled catalog: starts empty, filled by hand, by import or by AI suggestions.
+         */
+        post: operations["add_country_api_catalog_countries_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -734,6 +741,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/country": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose Country
+         * @description The household's country: default for new subscriptions, the catalog shown first, and where AI looks.
+         */
+        put: operations["choose_country_api_settings_country_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -854,6 +881,40 @@ export interface components {
             settings?: {
                 [key: string]: unknown;
             };
+        };
+        /** CountryChoice */
+        CountryChoice: {
+            /** Code */
+            code: string;
+        };
+        /** CountryIn */
+        CountryIn: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /**
+             * Currency
+             * @default EUR
+             */
+            currency: string;
+        };
+        /** CountryOut */
+        CountryOut: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Currency */
+            currency: string;
+            /** Settings */
+            settings: {
+                [key: string]: unknown;
+            };
+            /** Provider Count */
+            provider_count: number;
+            /** Builtin */
+            builtin: boolean;
         };
         /** CountrySettingsIn */
         CountrySettingsIn: {
@@ -1192,6 +1253,8 @@ export interface components {
             monthly_total: number;
             /** Monthly Cap */
             monthly_cap: number | null;
+            /** Scheme Note */
+            scheme_note: string;
             /** Currency */
             currency: string;
         };
@@ -2544,7 +2607,40 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Country"][];
+                    "application/json": components["schemas"]["CountryOut"][];
+                };
+            };
+        };
+    };
+    add_country_api_catalog_countries_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CountryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Country"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -3345,6 +3441,41 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    choose_country_api_settings_country_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CountryChoice"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

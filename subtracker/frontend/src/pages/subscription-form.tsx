@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { type Provider, type SubIn, api, unwrap, useProviders, useSubscription, useSubscriptions } from "@/lib/api";
+import { type Provider, type SubIn, api, unwrap, useCountries, useProviders, useSettings, useSubscription, useSubscriptions } from "@/lib/api";
 import { CYCLE_LABEL, KIND_LABEL, errorText } from "@/lib/format";
 
 const BLANK: SubIn = {
@@ -27,9 +27,14 @@ export function SubscriptionFormPage() {
   const id = params.id ? Number(params.id) : undefined;
   const existing = useSubscription(id ?? 0);
   const search = useSearch({ strict: false }) as { kind?: SubIn["kind"] };
+  const settings = useSettings();
+  const countries = useCountries();
   if (id && existing.isPending) return null;
   if (id && existing.isError) return <p className="text-sm text-destructive">{errorText(existing.error)}</p>;
-  const fresh = search.kind === "refill" ? { ...BLANK, kind: "refill" as const, category: "medicine", reminder_days: [3, 1] } : BLANK;
+  if (!id && (settings.isPending || countries.isPending)) return null;
+  const home = countries.data?.find((c) => c.code === settings.data?.country);
+  const local = { ...BLANK, country: home?.code ?? BLANK.country, currency: home?.currency ?? BLANK.currency };
+  const fresh = search.kind === "refill" ? { ...local, kind: "refill" as const, category: "medicine", reminder_days: [3, 1] } : local;
   return <SubscriptionForm id={id} initial={id && existing.data ? { ...BLANK, ...existing.data } : fresh} />;
 }
 

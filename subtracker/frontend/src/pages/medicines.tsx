@@ -14,7 +14,7 @@ export function Medicines() {
   const data = useQuery({ queryKey: ["subscriptions", "medicines"], queryFn: async () => unwrap(await api.GET("/api/medicines")) });
   if (data.isPending) return null;
   if (data.isError) return <p className="text-sm text-destructive">{errorText(data.error)}</p>;
-  const { items, monthly_total, monthly_cap, currency } = data.data;
+  const { items, monthly_total, monthly_cap, scheme_note, currency } = data.data;
   const overCap = monthly_cap != null && monthly_total > monthly_cap;
   return (
     <>
@@ -32,9 +32,9 @@ export function Medicines() {
             <CardDescription>
               {monthly_cap != null
                 ? overCap
-                  ? `Above the ${money(monthly_cap, currency)} Drug Payment Scheme cap: register for DPS and you pay at most ${money(monthly_cap, currency)} a month as a household.`
-                  : `Below the ${money(monthly_cap, currency)} Drug Payment Scheme monthly cap.`
-                : "Add your country's scheme cap in the catalog to compare."}
+                  ? `Above the ${money(monthly_cap, currency)} monthly prescription cap. ${scheme_note}`
+                  : `Below the ${money(monthly_cap, currency)} monthly prescription cap. ${scheme_note}`
+                : scheme_note || "Set a monthly scheme cap for your country in the catalog to compare."}
             </CardDescription>
           </CardHeader>
           {monthly_cap != null && (

@@ -23,8 +23,6 @@ options:
   ollama_url: ""
   ollama_model: llama3.1
   ha_ai_task_entity: ""
-  countries:
-    - IE
   discovery_interval_days: 30
   deal_search_lead_days: 45
   resend_api_key: ""
@@ -40,8 +38,6 @@ schema:
   ollama_url: str?
   ollama_model: str?
   ha_ai_task_entity: str?
-  countries:
-    - str
   discovery_interval_days: int(0,365)
   deal_search_lead_days: int(1,365)
   resend_api_key: password?

@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from ..config import CATALOG_DIR
-from ..models import Category, Country, Provider, ProviderBase
+from ..models import AppSetting, Category, Country, Provider, ProviderBase
 
 log = logging.getLogger("subtracker.catalog")
 
@@ -90,6 +90,24 @@ def load_bundled(session: Session) -> None:
         except Exception:  # a broken bundled file must not stop the add-on
             session.rollback()
             log.exception("Could not load catalog %s", path.name)
+
+
+def household_country(session: Session) -> str:
+    """The country the household lives in: the chosen one, else Ireland if loaded, else the first catalog."""
+    chosen = session.get(AppSetting, "country")
+    if chosen and session.get(Country, chosen.value.get("code")):
+        return chosen.value["code"]
+    if session.get(Country, "IE"):
+        return "IE"
+    first = session.exec(select(Country).order_by(Country.code)).first()
+    return first.code if first else "IE"
+
+
+def set_household_country(session: Session, code: str) -> None:
+    row = session.get(AppSetting, "country") or AppSetting(key="country")
+    row.value = {"code": code}
+    session.add(row)
+    session.commit()
 
 
 def export(session: Session, code: str) -> str:

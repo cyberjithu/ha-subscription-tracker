@@ -1,0 +1,121 @@
+# Germany provider catalog, bundled with the add-on.
+# Loaded on every start: new providers are added and unedited bundled ones are refreshed.
+# Anything you edit, add or hide in the app is kept as you left it.
+#
+# Switching info is general guidance, not your contract: always check your own terms.
+# Plans/prices are left empty on purpose; they go stale fast and are refreshed by the AI deal finder.
+# Household waste is collected by the municipality (Abfallgebühren), so there are no bin companies to compare.
+captured_at: 2026-11-03
+
+country:
+  code: DE
+  name: Germany
+  currency: EUR
+  settings:
+    switch_sites:
+      - name: Check24
+        url: https://www.check24.de/
+      - name: Verivox
+        url: https://www.verivox.de/
+    regulators:
+      telecoms: { name: Bundesnetzagentur, url: https://www.bundesnetzagentur.de/DE/Vportal/start.html }
+      energy: { name: Bundesnetzagentur, url: https://www.bundesnetzagentur.de/DE/Vportal/start.html }
+      consumer: { name: Verbraucherzentrale, url: https://www.verbraucherzentrale.de/ }
+    medicine_note: >-
+      Statutory health insurance co-payment (Zuzahlung) is usually 10% of the price, at least 5 € and at most
+      10 € per item. Above 2% of yearly household gross income (1% for chronic illness) you can apply to your
+      Krankenkasse for an exemption for the rest of the year.
+
+categories:
+  - { slug: broadband, name: Broadband, icon: mdi:router-wireless }
+  - { slug: mobile, name: Mobile, icon: mdi:cellphone }
+  - { slug: electricity, name: Electricity, icon: mdi:flash }
+  - { slug: gas, name: Gas, icon: mdi:fire }
+  - { slug: streaming, name: Streaming & TV, icon: mdi:television-play }
+  - { slug: software, name: Software & AI, icon: mdi:application-cog }
+  - { slug: broadcast-fee, name: Broadcast fee, icon: mdi:radio-tower, ai_deals: false }
+  - { slug: medicine, name: Medicines, icon: mdi:pill, ai_deals: false }
+
+# Reused switching blocks
+x-telecom: &telecom
+  contract_lengths: [0, 12, 24]
+  notice_days: 30
+  cancel_method: >-
+    First term is at most 24 months. After the minimum term the contract runs on monthly and can be cancelled
+    with one month's notice (TKG § 56); the new provider can port your number and handle the switch.
+  switch_site: https://www.check24.de/
+  regulator: https://www.bundesnetzagentur.de/DE/Vportal/start.html
+x-energy: &energy
+  contract_lengths: [0, 12, 24]
+  notice_days: 30
+  cancel_method: >-
+    Sign up with the new supplier; they cancel the old contract for you. Grundversorgung can be left with two
+    weeks' notice; special contracts follow their terms. A price increase gives you a special right to cancel.
+  switch_site: https://www.verivox.de/
+  regulator: https://www.bundesnetzagentur.de/DE/Vportal/start.html
+x-anytime: &anytime
+  contract_lengths: [0]
+  notice_days: 0
+  cancel_method: Cancel in your account settings any time; access usually runs to the end of the paid period.
+
+providers:
+  # Internet (DSL, cable, fibre)
+  - { slug: telekom, name: Telekom, category: broadband, url: https://www.telekom.de/, pricing_url: https://www.telekom.de/festnetz/tarife-und-optionen/internet-dsl, switching: *telecom }
+  - { slug: vodafone, name: Vodafone, category: broadband, url: https://www.vodafone.de/, pricing_url: https://www.vodafone.de/privat/internet.html, switching: *telecom, coverage: DSL nationwide; cable where Vodafone has a cable network. }
+  - { slug: o2, name: O2, category: broadband, url: https://www.o2online.de/, pricing_url: https://www.o2online.de/internet-festnetz/dsl-tarife/, switching: *telecom }
+  - { slug: 1und1, name: 1&1, category: broadband, url: https://www.1und1.de/, pricing_url: https://dsl.1und1.de/, switching: *telecom }
+  - { slug: deutsche-glasfaser, name: Deutsche Glasfaser, category: broadband, url: https://www.deutsche-glasfaser.de/, pricing_url: https://www.deutsche-glasfaser.de/, switching: *telecom, coverage: Fibre in towns where it has built a network; check your address. }
+  - { slug: pyur, name: PŸUR, category: broadband, url: https://www.pyur.com/, pricing_url: https://www.pyur.com/, switching: *telecom, coverage: Cable network in parts of Germany. }
+
+  # Mobile
+  - { slug: telekom, name: Telekom, category: mobile, url: https://www.telekom.de/, pricing_url: https://www.telekom.de/mobilfunk/tarife, switching: *telecom }
+  - { slug: vodafone, name: Vodafone, category: mobile, url: https://www.vodafone.de/, pricing_url: https://www.vodafone.de/privat/mobilfunk.html, switching: *telecom }
+  - { slug: o2, name: O2, category: mobile, url: https://www.o2online.de/, pricing_url: https://www.o2online.de/mobilfunk/, switching: *telecom }
+  - { slug: 1und1, name: 1&1, category: mobile, url: https://www.1und1.de/, pricing_url: https://www.1und1.de/handytarife, switching: *telecom }
+  - { slug: congstar, name: congstar, category: mobile, url: https://www.congstar.de/, pricing_url: https://www.congstar.de/, switching: *telecom }
+  - { slug: aldi-talk, name: ALDI TALK, category: mobile, url: https://www.alditalk.de/, pricing_url: https://www.alditalk.de/, switching: *telecom, coverage: Prepaid. }
+  - { slug: fraenk, name: fraenk, category: mobile, url: https://fraenk.de/, pricing_url: https://fraenk.de/, switching: *telecom }
+
+  # Electricity
+  - { slug: eon, name: E.ON, category: electricity, url: https://www.eon.de/, pricing_url: https://www.eon.de/de/pk/strom.html, switching: *energy }
+  - { slug: enbw, name: EnBW, category: electricity, url: https://www.enbw.com/, pricing_url: https://www.enbw.com/strom/, switching: *energy }
+  - { slug: vattenfall, name: Vattenfall, category: electricity, url: https://www.vattenfall.de/, pricing_url: https://www.vattenfall.de/strom/tarife, switching: *energy }
+  - { slug: octopus-energy, name: Octopus Energy, category: electricity, url: https://octopusenergy.de/, pricing_url: https://octopusenergy.de/, switching: *energy }
+  - { slug: tibber, name: Tibber, category: electricity, url: https://tibber.com/de, pricing_url: https://tibber.com/de, switching: *energy, coverage: Dynamic hourly tariff; needs a smart meter for full benefit. }
+  - { slug: lichtblick, name: LichtBlick, category: electricity, url: https://www.lichtblick.de/, pricing_url: https://www.lichtblick.de/, switching: *energy }
+  - { slug: naturstrom, name: NATURSTROM, category: electricity, url: https://www.naturstrom.de/, pricing_url: https://www.naturstrom.de/, switching: *energy }
+  - { slug: polarstern, name: Polarstern, category: electricity, url: https://www.polarstern-energie.de/, pricing_url: https://www.polarstern-energie.de/, switching: *energy }
+
+  # Gas
+  - { slug: eon, name: E.ON, category: gas, url: https://www.eon.de/, pricing_url: https://www.eon.de/de/pk/erdgas.html, switching: *energy }
+  - { slug: enbw, name: EnBW, category: gas, url: https://www.enbw.com/, pricing_url: https://www.enbw.com/gas/, switching: *energy }
+  - { slug: vattenfall, name: Vattenfall, category: gas, url: https://www.vattenfall.de/, pricing_url: https://www.vattenfall.de/gas/tarife, switching: *energy }
+  - { slug: octopus-energy, name: Octopus Energy, category: gas, url: https://octopusenergy.de/, pricing_url: https://octopusenergy.de/, switching: *energy }
+  - { slug: lichtblick, name: LichtBlick, category: gas, url: https://www.lichtblick.de/, pricing_url: https://www.lichtblick.de/, switching: *energy }
+
+  # Streaming & TV
+  - { slug: netflix, name: Netflix, category: streaming, url: https://www.netflix.com/de/, pricing_url: https://www.netflix.com/de/, switching: *anytime }
+  - { slug: disney-plus, name: Disney+, category: streaming, url: https://www.disneyplus.com/de-de, pricing_url: https://www.disneyplus.com/de-de, switching: *anytime }
+  - { slug: rtl-plus, name: RTL+, category: streaming, url: https://plus.rtl.de/, pricing_url: https://plus.rtl.de/, switching: *anytime }
+  - { slug: joyn, name: Joyn, category: streaming, url: https://www.joyn.de/, pricing_url: https://www.joyn.de/, switching: *anytime }
+  - { slug: wow, name: WOW, category: streaming, url: https://www.wowtv.de/, pricing_url: https://www.wowtv.de/, switching: *anytime }
+  - { slug: dazn, name: DAZN, category: streaming, url: https://www.dazn.com/de-DE/home, pricing_url: https://www.dazn.com/de-DE/home, switching: *anytime }
+  - { slug: spotify, name: Spotify, category: streaming, url: https://www.spotify.com/de/, pricing_url: https://www.spotify.com/de/premium/, switching: *anytime }
+
+  # Software & AI
+  - { slug: anthropic-claude, name: Claude (Anthropic), category: software, url: https://claude.com/, pricing_url: https://claude.com/pricing, switching: *anytime }
+  - { slug: chatgpt, name: ChatGPT (OpenAI), category: software, url: https://openai.com/chatgpt/, pricing_url: https://openai.com/chatgpt/pricing/, switching: *anytime }
+  - { slug: microsoft-365, name: Microsoft 365, category: software, url: https://www.microsoft.com/de-de/microsoft-365, pricing_url: https://www.microsoft.com/de-de/microsoft-365, switching: *anytime }
+  - { slug: icloud-plus, name: iCloud+, category: software, url: https://www.apple.com/de/icloud/, pricing_url: https://www.apple.com/de/icloud/, switching: *anytime }
+
+  # Broadcast fee (mandatory per household, cannot be switched; no deal search)
+  - slug: rundfunkbeitrag
+    name: Rundfunkbeitrag (ARD ZDF Deutschlandradio Beitragsservice)
+    category: broadcast-fee
+    url: https://www.rundfunkbeitrag.de/
+    pricing_url: https://www.rundfunkbeitrag.de/
+    coverage: "One fee per household: 18.36 € a month (2026), usually paid quarterly. Exemptions and reductions on application."
+    switching:
+      contract_lengths: [0]
+      notice_days: 0
+      cancel_method: Cannot be cancelled while you have a home in Germany; deregister when you move abroad or move in with someone who already pays.

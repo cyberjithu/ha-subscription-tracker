@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { type Provider, api, apiUrl, unwrap, useCategories, useCountries, useMe, useProviders } from "@/lib/api";
+import { type Provider, api, apiUrl, unwrap, useCategories, useCountries, useMe, useProviders, useSettings } from "@/lib/api";
 import { errorText, money } from "@/lib/format";
 
 type Switching = { contract_lengths?: number[]; notice_days?: number | null; cancel_method?: string; switch_site?: string; regulator?: string };
@@ -23,9 +23,12 @@ export function Catalog() {
   const countries = useCountries();
   const categories = useCategories();
   const [country, setCountry] = useState<string>();
-  const code = country ?? countries.data?.[0]?.code;
+  const app = useSettings();
+  const code = country ?? app.data?.country ?? countries.data?.[0]?.code;
   const [category, setCategory] = useState("all");
   const [showHidden, setShowHidden] = useState(false);
+  const all = useProviders({ country: code });
+  const inCountry = new Set((all.data ?? []).map((p) => p.category)); // only offer filters this country has
   const providers = useProviders({ country: code, category: category === "all" ? undefined : category, includeHidden: admin && showHidden });
   const [editing, setEditing] = useState<Provider | "new" | null>(null);
   const qc = useQueryClient();
@@ -81,7 +84,7 @@ export function Catalog() {
           </Select>
         )}
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="Category">
-          {["all", ...(categories.data ?? []).map((c) => c.slug)].map((slug) => (
+          {["all", ...(categories.data ?? []).map((c) => c.slug).filter((slug) => inCountry.has(slug))].map((slug) => (
             <Button key={slug} size="sm" variant={category === slug ? "default" : "outline"} aria-pressed={category === slug}
               onClick={() => setCategory(slug)}>
               {slug === "all" ? "All" : catName(slug)}
@@ -182,19 +185,19 @@ function CountryCard({ code, name, currency, settings, admin, onSaved }: {
         <CardTitle>{name}</CardTitle>
         <CardDescription className="flex flex-wrap gap-x-4 gap-y-1">
           <span>Compare: {(settings.switch_sites ?? []).map((s, i) => <span key={s.url}>{i > 0 && ", "}<a className="underline underline-offset-2" href={s.url} target="_blank" rel="noreferrer">{s.name}</a></span>)}</span>
-          {settings.regulators && <span>Regulators: {Object.values(settings.regulators).map((r, i) => <span key={r.url}>{i > 0 && ", "}<a className="underline underline-offset-2" href={r.url} target="_blank" rel="noreferrer">{r.name}</a></span>)}</span>}
+          {settings.regulators && <span>Regulators: {[...new Map(Object.values(settings.regulators).map((r) => [r.url, r])).values()].map((r, i) => <span key={r.url}>{i > 0 && ", "}<a className="underline underline-offset-2" href={r.url} target="_blank" rel="noreferrer">{r.name}</a></span>)}</span>}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {admin ? (
           <form onSubmit={save} className="flex flex-wrap items-end gap-3">
-            <Field label={`Drug Payment Scheme monthly cap (${currency})`} htmlFor="dps" hint="Used on the Medicines page.">
+            <Field label={`Monthly prescription cost cap (${currency})`} htmlFor="dps" hint="A household limit like Ireland's Drug Payment Scheme. Leave empty if your country has none.">
               <Input id="dps" type="number" min={0} step="0.01" className="w-40" value={cap} onChange={(e) => setCap(e.target.value)} />
             </Field>
             <Button type="submit" variant="outline">Save</Button>
           </form>
         ) : (
-          <p className="text-sm">Drug Payment Scheme cap: {settings.dps_monthly_cap != null ? money(settings.dps_monthly_cap, currency) : "not set"}</p>
+          <p className="text-sm">Monthly prescription cap: {settings.dps_monthly_cap != null ? money(settings.dps_monthly_cap, currency) : "none"}</p>
         )}
       </CardContent>
     </Card>

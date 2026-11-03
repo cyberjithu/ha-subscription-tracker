@@ -35,7 +35,7 @@ export function Suggestions() {
   const [category, setCategory] = useState(ALL);
   const [running, setRunning] = useState(false);
   const [editing, setEditing] = useState<Suggestion | null>(null);
-  const code = country ?? countries.data?.[0]?.code;
+  const code = country ?? settings.data?.country ?? countries.data?.[0]?.code;
   const catName = (slug: string) => categories.data?.find((c) => c.slug === slug)?.name ?? slug;
 
   const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ["suggestions"] }), qc.invalidateQueries({ queryKey: ["catalog"] })]);

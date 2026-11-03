@@ -183,3 +183,48 @@ def test_medicines_note_follows_household_country(api, session):
     session.commit()
     out = api.get("/api/medicines", headers=ALICE).json()
     assert out["monthly_cap"] is None and out["scheme_note"] == "Zuzahlung 5-10 EUR"
+
+
+# --- one click from the catalog ---
+
+@pytest.fixture
+def catalog_ie(session):
+    from app.config import CATALOG_DIR
+    from app.services import catalog
+    catalog.apply(session, catalog.parse((CATALOG_DIR / "ie.yaml").read_text()), bundled=True)
+    from app.models import Provider
+    from sqlmodel import select
+    return {(p.category, p.slug): p.id for p in session.exec(select(Provider))}
+
+
+def test_add_from_provider_prefills(api, catalog_ie):
+    r = api.post("/api/subscriptions/from-provider", json={"provider_id": catalog_ie[("broadband", "sky")]}, headers=ALICE)
+    s = r.json()
+    assert r.status_code == 201 and s["name"] == "Sky" and s["category"] == "broadband" and s["kind"] == "contract"
+    assert s["notice_days"] == 30 and s["account_url"] == "https://www.sky.com/ie" and s["currency"] == "EUR"
+    gas = api.post("/api/subscriptions/from-provider", json={"provider_id": catalog_ie[("gas", "flogas")]}, headers=ALICE).json()
+    assert gas["kind"] == "usage" and gas["notice_days"] is None  # energy: no notice needed
+    tv = api.post("/api/subscriptions/from-provider", json={"provider_id": catalog_ie[("streaming", "netflix")], "personal": True}, headers=ALICE).json()
+    assert tv["kind"] == "fixed" and tv["owner_user_id"] == "alice"
+    assert api.post("/api/subscriptions/from-provider", json={"provider_id": 99999}, headers=ALICE).status_code == 404
+    assert api.post("/api/subscriptions/from-provider", json={"provider_id": catalog_ie[("broadband", "sky")]}, headers=VIEWER).status_code == 403
+
+
+def test_add_from_provider_replace_or_keep_both(api, catalog_ie):
+    old = create(api, name="eir", category="broadband", kind="contract", price=60)
+    api.post(f"/api/subscriptions/{old['id']}/bills", json={"period_start": "2026-01-01", "period_end": "2026-01-31", "amount": 60}, headers=ALICE)
+    both = api.post("/api/subscriptions/from-provider", json={"provider_id": catalog_ie[("broadband", "vodafone")]}, headers=ALICE)
+    assert both.status_code == 201
+    assert api.get(f"/api/subscriptions/{old['id']}", headers=ALICE).json()["status"] == "active"  # second connection
+    r = api.post("/api/subscriptions/from-provider",
+                 json={"provider_id": catalog_ie[("broadband", "sky")], "replace_id": old["id"]}, headers=ALICE)
+    assert r.status_code == 201
+    replaced = api.get(f"/api/subscriptions/{old['id']}", headers=ALICE).json()
+    assert replaced["status"] == "cancelled" and "Replaced by Sky" in replaced["notes"]
+    assert len(api.get(f"/api/subscriptions/{old['id']}/prices", headers=ALICE).json()) == 1  # history kept
+    mine = create(api, name="Bob's line", category="broadband", personal=True, headers=BOB)
+    assert api.post("/api/subscriptions/from-provider",
+                    json={"provider_id": catalog_ie[("broadband", "sky")], "replace_id": mine["id"]}, headers=ALICE).status_code == 404
+    taken = api.post("/api/subscriptions/from-provider",
+                     json={"provider_id": catalog_ie[("broadband", "eir")], "replace_id": mine["id"]}, headers=ADMIN).json()
+    assert taken["owner_user_id"] == "bob"  # an admin replacing someone's personal item keeps it theirs

@@ -275,6 +275,14 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - [x] Browser: fake test key saved → masked, encrypted in DB (plaintext found in no file under `.data` and not in the server log), used by "Test AI connection"; removed again, OpenAI restored
 - **Gate:** tests green; image builds with the new dependency; committed.
 
+### C17 — Add from catalog in one click  ✅ done
+- [x] `POST /subscriptions/from-provider`: subscription prefilled from the provider (name, category, billing type by category, country and currency, notice period, account link)
+- [x] Same category already tracked → dialog: Replace one of them (old one marked cancelled with a note, price history and bills kept) or keep both (e.g. a second internet connection); then opens the new subscription to add price and dates
+- [x] An admin replacing someone's personal item keeps the new one on that person's list; viewers can't add
+- [x] Tests (2): prefill per category, keep both, replace keeps history, visibility, roles
+- [x] Browser: Add on 1&1 with eir already present → keep both; Add Telekom → replace 1&1 (cancelled + note); accessible labels on Add/Replace buttons
+- **Gate:** tests green (119); flows checked in UI; committed.
+
 ### Later (not v1)
 - [ ] `catalogs/fr.yaml
 - [ ] Actionable notification responses via HA websocket

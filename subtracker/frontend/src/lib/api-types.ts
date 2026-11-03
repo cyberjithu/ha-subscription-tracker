@@ -39,6 +39,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/subscriptions/from-provider": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * From Provider
+         * @description One click from the catalog: a subscription prefilled from the provider, optionally replacing an old one.
+         */
+        post: operations["from_provider_api_subscriptions_from_provider_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/subscriptions/{sub_id}": {
         parameters: {
             query?: never;
@@ -1086,6 +1106,18 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** FromProviderIn */
+        FromProviderIn: {
+            /** Provider Id */
+            provider_id: number;
+            /** Replace Id */
+            replace_id?: number | null;
+            /**
+             * Personal
+             * @default false
+             */
+            personal: boolean;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1964,6 +1996,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SubscriptionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    from_provider_api_subscriptions_from_provider_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FromProviderIn"];
             };
         };
         responses: {

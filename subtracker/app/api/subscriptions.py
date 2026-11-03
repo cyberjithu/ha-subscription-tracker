@@ -11,7 +11,7 @@ from sqlmodel import Session, SQLModel, delete, or_, select
 from ..auth import current_user, writer
 from ..config import DATA_DIR
 from ..db import get_session
-from ..models import (Bill, BillBase, DealSearch, Document, Kind, MedicineBase, MedicineDetail, PriceChange, Role,
+from ..models import (Bill, BillBase, Country, DealSearch, Document, Provider, Kind, MedicineBase, MedicineDetail, PriceChange, Role,
                       SubStatus, Subscription, SubscriptionBase, UserProfile)
 from ..services import schedule
 
@@ -104,6 +104,41 @@ def create_subscription(body: SubscriptionIn, user: UserProfile = Depends(writer
     session.commit()
     session.refresh(sub)
     return to_out(session, sub)
+
+
+class FromProviderIn(SQLModel):
+    provider_id: int
+    replace_id: int | None = None  # existing subscription this one takes over from (marked cancelled, history kept)
+    personal: bool = False
+
+
+# how each catalog category is usually billed; anything else is a flat recurring price
+KIND_BY_CATEGORY = {"broadband": Kind.contract, "mobile": Kind.contract, "electricity": Kind.usage, "gas": Kind.usage}
+
+
+@router.post("/from-provider", response_model=SubscriptionOut, status_code=201)
+def from_provider(body: FromProviderIn, user: UserProfile = Depends(writer), session: Session = Depends(get_session)):
+    """One click from the catalog: a subscription prefilled from the provider, optionally replacing an old one."""
+    p = session.get(Provider, body.provider_id)
+    if not p or p.hidden:
+        raise HTTPException(404, "Provider not found")
+    old = get_visible(session, body.replace_id, user) if body.replace_id else None
+    country = session.get(Country, p.country)
+    notice = (p.switching or {}).get("notice_days")
+    new = SubscriptionIn(
+        name=p.name, category=p.category, kind=KIND_BY_CATEGORY.get(p.category, Kind.fixed), country=p.country,
+        currency=country.currency if country else "EUR", provider_id=p.id, account_url=p.url,
+        notice_days=notice or None, personal=body.personal or bool(old and old.owner_user_id),
+    )
+    out = create_subscription(new, user, session)
+    if old:
+        if old.owner_user_id:  # an admin replacing someone's personal item: it stays on their list
+            session.get(Subscription, out.id).owner_user_id = old.owner_user_id
+            out.owner_user_id = old.owner_user_id
+        old.status = SubStatus.cancelled  # keep its price history and bills instead of deleting
+        old.notes = (old.notes + "\n" if old.notes else "") + f"Replaced by {p.name} on {date.today():%d %b %Y}."
+        session.commit()
+    return out
 
 
 @router.get("/{sub_id}", response_model=SubscriptionOut)

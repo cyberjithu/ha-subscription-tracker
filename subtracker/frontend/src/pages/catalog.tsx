@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { type Provider, api, apiUrl, unwrap, useCategories, useCountries, useMe, useProviders, useSettings } from "@/lib/api";
+import { useNavigate } from "@tanstack/react-router";
+import { type Provider, type Sub, api, apiUrl, unwrap, useCategories, useCountries, useMe, useProviders, useSettings, useSubscriptions } from "@/lib/api";
 import { errorText, money } from "@/lib/format";
 
 type Switching = { contract_lengths?: number[]; notice_days?: number | null; cancel_method?: string; switch_site?: string; regulator?: string };
@@ -31,6 +32,28 @@ export function Catalog() {
   const inCountry = new Set((all.data ?? []).map((p) => p.category)); // only offer filters this country has
   const providers = useProviders({ country: code, category: category === "all" ? undefined : category, includeHidden: admin && showHidden });
   const [editing, setEditing] = useState<Provider | "new" | null>(null);
+  const [adding, setAdding] = useState<{ provider: Provider; existing: Sub[] } | null>(null);
+  const subs = useSubscriptions();
+  const navigate = useNavigate();
+  const canAdd = me.data?.role !== "viewer";
+  const addToSubscriptions = async (provider: Provider, replace?: Sub) => {
+    try {
+      const sub = unwrap(await api.POST("/api/subscriptions/from-provider", {
+        body: { provider_id: provider.id!, replace_id: replace?.id ?? null, personal: false },
+      }));
+      await qc.invalidateQueries({ queryKey: ["subscriptions"] });
+      setAdding(null);
+      toast.success(replace ? `${provider.name} replaces ${replace.name}. Add the price and dates.` : `${provider.name} added. Add the price and dates.`);
+      navigate({ to: "/subscriptions/$id/edit", params: { id: String(sub.id) } });
+    } catch (e) {
+      toast.error(errorText(e));
+    }
+  };
+  const onAdd = (provider: Provider) => {
+    const existing = (subs.data ?? []).filter((x) => x.category === provider.category && x.status !== "cancelled");
+    if (existing.length) setAdding({ provider, existing }); // same category already tracked: replace or keep both?
+    else addToSubscriptions(provider);
+  };
   const qc = useQueryClient();
   const file = useRef<HTMLInputElement>(null);
   const current = countries.data?.find((c) => c.code === code);
@@ -108,7 +131,7 @@ export function Catalog() {
             <h2 className="mb-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">{catName(cat)}</h2>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {providers.data.filter((p) => p.category === cat).map((p) => (
-                <ProviderCard key={p.id} p={p} admin={admin} onEdit={() => setEditing(p)}
+                <ProviderCard key={p.id} p={p} admin={admin} onEdit={() => setEditing(p)} onAdd={canAdd ? () => onAdd(p) : undefined}
                   onHide={() => act(async () => unwrap(await api.DELETE("/api/catalog/providers/{provider_id}", { params: { path: { provider_id: p.id! } } })),
                     p.source === "manual" || p.source === "ai-accepted" ? `${p.name} deleted` : `${p.name} hidden`)}
                   onRestore={() => act(async () => unwrap(await api.POST("/api/catalog/providers/{provider_id}/restore", { params: { path: { provider_id: p.id! } } })), `${p.name} restored`)} />
@@ -116,6 +139,11 @@ export function Catalog() {
             </div>
           </section>
         ))
+      )}
+
+      {adding && (
+        <ReplaceDialog provider={adding.provider} existing={adding.existing} catName={catName(adding.provider.category)}
+          onClose={() => setAdding(null)} onChoose={(replace) => addToSubscriptions(adding.provider, replace)} />
       )}
 
       {editing && code && (
@@ -128,7 +156,9 @@ export function Catalog() {
   );
 }
 
-function ProviderCard({ p, admin, onEdit, onHide, onRestore }: { p: Provider; admin: boolean; onEdit: () => void; onHide: () => void; onRestore: () => void }) {
+function ProviderCard({ p, admin, onEdit, onHide, onRestore, onAdd }: {
+  p: Provider; admin: boolean; onEdit: () => void; onHide: () => void; onRestore: () => void; onAdd?: () => void;
+}) {
   const sw = (p.switching ?? {}) as Switching;
   const terms = sw.contract_lengths?.length ? sw.contract_lengths.map((m) => (m === 0 ? "no contract" : `${m} mo`)).join(" / ") : null;
   return (
@@ -149,6 +179,7 @@ function ProviderCard({ p, admin, onEdit, onHide, onRestore }: { p: Provider; ad
         {sw.cancel_method && <p className="text-muted-foreground">{sw.cancel_method}</p>}
       </CardContent>
       <CardFooter className="flex flex-wrap gap-1">
+        {onAdd && !p.hidden && <Button size="sm" onClick={onAdd} aria-label={`Add ${p.name} to subscriptions`}><PlusIcon /> Add</Button>}
         {p.url && <Button variant="ghost" size="sm" asChild><a href={p.url} target="_blank" rel="noreferrer"><ExternalLinkIcon /> Website</a></Button>}
         {p.pricing_url && p.pricing_url !== p.url && <Button variant="ghost" size="sm" asChild><a href={p.pricing_url} target="_blank" rel="noreferrer"><ExternalLinkIcon /> Prices</a></Button>}
         {admin && (
@@ -266,6 +297,45 @@ function ProviderDialog({ provider, country, categories, defaultCategory, onClos
             <Button type="submit">Save</Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ReplaceDialog({ provider, existing, catName, onClose, onChoose }: {
+  provider: Provider; existing: Sub[]; catName: string; onClose: () => void; onChoose: (replace?: Sub) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const choose = async (replace?: Sub) => {
+    setBusy(true);
+    await onChoose(replace);
+    setBusy(false);
+  };
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>You already have {catName.toLowerCase()}</DialogTitle>
+          <DialogDescription>
+            Is {provider.name} replacing one of these, or is it an extra one (for example a second connection)?
+            A replaced subscription is marked cancelled, so its price history and bills are kept.
+          </DialogDescription>
+        </DialogHeader>
+        <ul className="grid gap-2">
+          {existing.map((x) => (
+            <li key={x.id} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+              <span className="min-w-0">
+                <span className="block truncate font-medium">{x.name}</span>
+                <span className="text-xs text-muted-foreground">{money(x.monthly_cost, x.currency)} a month{x.owner_user_id ? " · personal" : ""}</span>
+              </span>
+              <Button size="sm" variant="outline" disabled={busy} onClick={() => choose(x)} aria-label={`Replace ${x.name}`}>Replace</Button>
+            </li>
+          ))}
+        </ul>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button onClick={() => choose()} disabled={busy}><PlusIcon /> Keep both, add {provider.name}</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

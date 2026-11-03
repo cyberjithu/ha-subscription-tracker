@@ -266,6 +266,15 @@ Categories + well-known providers with URLs and switching info: broadband (eir, 
 - [x] Tests: every bundled catalog validated (parametrised), country specifics, household default/choice, choose/add country API (roles, validation, 404/409), medicines note
 - **Gate:** tests green (106); Germany chosen and shown in the browser; committed.
 
+### C16 — AI keys in Settings  ✅ done
+- [x] Admin can set AI provider, model, Ollama URL, HA AI Task entity and Anthropic/OpenAI keys under Settings → AI assistant; values override the add-on options, no restart
+- [x] Keys encrypted with Fernet (`cryptography` 50.0.2, musl wheels for aarch64/amd64) before storage; encryption key in `/data/.secret.key` created with mode 0600; a lost key file reads as "not set", never a crash
+- [x] API never returns keys: only set / source (app or add-on) / last four characters; keep, replace or remove a key
+- [x] Every AI caller (test, deals, bill reading, suggestions, discovery and deal jobs) uses the effective settings
+- [x] Tests (11): encrypt/decrypt, file mode 0600, no plaintext in DB or responses, keep/replace/remove, app overrides add-on and falls back, validation, admin only
+- [x] Browser: fake test key saved → masked, encrypted in DB (plaintext found in no file under `.data` and not in the server log), used by "Test AI connection"; removed again, OpenAI restored
+- **Gate:** tests green; image builds with the new dependency; committed.
+
 ### Later (not v1)
 - [ ] `catalogs/fr.yaml
 - [ ] Actionable notification responses via HA websocket

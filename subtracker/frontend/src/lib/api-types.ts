@@ -761,10 +761,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/ai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Ai Settings */
+        get: operations["get_ai_settings_api_settings_ai_get"];
+        /** Put Ai Settings */
+        put: operations["put_ai_settings_api_settings_ai_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AISettingsIn
+         * @description Only the fields sent are changed. Empty text clears an app value back to the add-on option.
+         */
+        AISettingsIn: {
+            /** Ai Provider */
+            ai_provider?: ("none" | "anthropic" | "openai" | "ollama" | "ha_ai_task") | null;
+            /** Anthropic Model */
+            anthropic_model?: string | null;
+            /** Openai Model */
+            openai_model?: string | null;
+            /** Ollama Url */
+            ollama_url?: string | null;
+            /** Ollama Model */
+            ollama_model?: string | null;
+            /** Ha Ai Task Entity */
+            ha_ai_task_entity?: string | null;
+            /** Anthropic Api Key */
+            anthropic_api_key?: string | null;
+            /** Openai Api Key */
+            openai_api_key?: string | null;
+        };
         /** Bill */
         Bill: {
             /**
@@ -3455,6 +3495,63 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CountryChoice"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ai_settings_api_settings_ai_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    put_ai_settings_api_settings_ai_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AISettingsIn"];
             };
         };
         responses: {

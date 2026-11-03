@@ -6,11 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, SQLModel, select
 
 from ..auth import current_user, writer
-from ..config import get_options
 from ..db import get_session
 from ..models import Category, DealSearch, Document, SubStatus, Subscription, UserProfile
 from ..services.ai.base import AIError, AIRequest, Attachment, ask
 from ..services.ai.providers import get_provider
+from ..services.ai_settings import effective_options
 from ..services.ai.schemas import BillExtract
 from ..services.deals import build_prompt, decision_date, ineligible_reason, run_deal_search
 from .subscriptions import get_visible, visible_query
@@ -40,7 +40,7 @@ def preview(sub_id: int, user: UserProfile = Depends(current_user), session: Ses
     """Exactly what would be sent, so people can check it before running a search."""
     sub = get_visible(session, sub_id, user)
     reason = ineligible_reason(sub, session.get(Category, sub.category))
-    ai = get_provider(get_options())
+    ai = get_provider(effective_options(session))
     return DealPreview(eligible=reason is None, reason=reason, provider=ai.name if ai else None,
                        web_search=bool(ai and ai.supports_web_search),
                        prompt="" if reason else build_prompt(session, sub, date.today()))
@@ -49,9 +49,9 @@ def preview(sub_id: int, user: UserProfile = Depends(current_user), session: Ses
 @router.post("/subscriptions/{sub_id}/deals", response_model=DealSearch)
 async def search_now(sub_id: int, user: UserProfile = Depends(writer), session: Session = Depends(get_session)):
     sub = get_visible(session, sub_id, user)
-    ai = get_provider(get_options())
+    ai = get_provider(effective_options(session))
     if ai is None:
-        raise HTTPException(400, "No AI provider is set up. Add one in the add-on configuration.")
+        raise HTTPException(400, "No AI provider is set up. An admin can add one in Settings.")
     try:
         return await run_deal_search(session, ai, sub)
     except AIError as e:  # not eligible; AI failures are stored on the search row instead
@@ -91,7 +91,7 @@ async def extract_bill(sub_id: int, doc_id: int, user: UserProfile = Depends(wri
         raise HTTPException(422, reason)  # same rule as deals: no medicines, respect the AI switch
     if doc.content_type not in VISION_TYPES:
         raise HTTPException(415, "Only PDF, PNG, JPEG or WebP bills can be read")
-    ai = get_provider(get_options())
+    ai = get_provider(effective_options(session))
     if ai is None or not ai.supports_attachments:
         raise HTTPException(400, "The configured AI cannot read documents. Use Claude or OpenAI for this.")
     prompt = ("Read this utility or subscription bill. Extract the billing period, total amount due for that period, "

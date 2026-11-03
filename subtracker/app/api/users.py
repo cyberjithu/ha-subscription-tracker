@@ -1,15 +1,18 @@
 """Own profile, household user management (admin), add-on settings without secrets."""
 import time
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import Field as PField
 from sqlmodel import Session, SQLModel, select
 
 from ..auth import admin_only, current_user
-from ..config import get_options
 from ..db import get_session
 from ..models import Country, Role, UserPrefs, UserProfile
 from ..services.ai.base import AIError, AIRequest, ask
+from ..services import ai_settings
 from ..services.ai.providers import get_provider
+from ..services.ai_settings import effective_options
 from ..services.ai.schemas import Ping
 from ..services import catalog
 from ..services.ha import ha
@@ -32,6 +35,22 @@ class UserSummary(SQLModel):
 
 class CountryChoice(SQLModel):
     code: str
+
+
+Model = Annotated[str, PField(max_length=100, pattern=r"^[A-Za-z0-9._:/-]*$")]
+Key = Annotated[str, PField(max_length=400, pattern=r"^(\S{20,})?$")]  # "" removes; otherwise no spaces, 20+ chars
+
+
+class AISettingsIn(SQLModel):
+    """Only the fields sent are changed. Empty text clears an app value back to the add-on option."""
+    ai_provider: Literal["none", "anthropic", "openai", "ollama", "ha_ai_task"] | None = None
+    anthropic_model: Model | None = None
+    openai_model: Model | None = None
+    ollama_url: Annotated[str, PField(max_length=200, pattern=r"^(https?://\S+)?$")] | None = None
+    ollama_model: Model | None = None
+    ha_ai_task_entity: Annotated[str, PField(max_length=100, pattern=r"^(ai_task\.[a-z0-9_]+)?$")] | None = None
+    anthropic_api_key: Key | None = None  # None = keep, "" = remove
+    openai_api_key: Key | None = None
 
 
 class RoleIn(SQLModel):
@@ -92,7 +111,7 @@ async def notify_services(_: UserProfile = Depends(current_user)):
 
 @router.get("/settings")
 def settings(user: UserProfile = Depends(current_user), session: Session = Depends(get_session)) -> dict:
-    opts = get_options()
+    opts = effective_options(session)
     provider = get_provider(opts)
     ai_ready = provider is not None and (provider.name != "ha_ai_task" or ha.live)
     public = {"ai_provider": opts.ai_provider, "ai_ready": ai_ready, "country": catalog.household_country(session),
@@ -105,11 +124,11 @@ def settings(user: UserProfile = Depends(current_user), session: Session = Depen
 
 
 @router.post("/settings/test-ai")
-async def test_ai(_: UserProfile = Depends(admin_only)) -> dict:
+async def test_ai(_: UserProfile = Depends(admin_only), session: Session = Depends(get_session)) -> dict:
     """One tiny round trip through the configured AI, to check keys and model names."""
-    provider = get_provider(get_options())
+    provider = get_provider(effective_options(session))
     if provider is None:
-        return {"ok": False, "detail": "No AI provider is set up. Choose one and add its key in the add-on configuration."}
+        return {"ok": False, "detail": "No AI provider is set up. Choose one and add its key above."}
     started = time.monotonic()
     try:
         await ask(provider, AIRequest('Connectivity check. Answer with ok=true and the name of the model you are.'), Ping)
@@ -125,3 +144,17 @@ def choose_country(body: CountryChoice, _: UserProfile = Depends(admin_only), se
         raise HTTPException(404, "No catalog for this country yet. Add it as a custom country first.")
     catalog.set_household_country(session, body.code)
     return {"country": body.code}
+
+
+@router.get("/settings/ai")
+def get_ai_settings(_: UserProfile = Depends(admin_only), session: Session = Depends(get_session)) -> dict:
+    return ai_settings.describe(session)
+
+
+@router.put("/settings/ai")
+def put_ai_settings(body: AISettingsIn, _: UserProfile = Depends(admin_only), session: Session = Depends(get_session)) -> dict:
+    sent = body.model_dump(exclude_unset=True)
+    plain = {k: v for k, v in sent.items() if k in ai_settings.PLAIN_FIELDS and v is not None}
+    secrets = {k: sent.get(k) for k in ai_settings.SECRET_FIELDS}
+    ai_settings.save(session, plain, secrets)
+    return ai_settings.describe(session)

@@ -2,6 +2,7 @@ import pytest
 
 from app.api import users as users_api
 from app.config import Options
+from app.services import ai_settings
 from app.models import Role, UserProfile
 
 from .conftest import as_user
@@ -42,7 +43,7 @@ def test_roles_admin_only_and_last_admin(api):
 
 def test_settings_never_returns_secrets(api, monkeypatch):
     opts = Options(ai_provider="anthropic", anthropic_api_key="sk-secret", resend_api_key="re-secret")
-    monkeypatch.setattr(users_api, "get_options", lambda: opts)
+    monkeypatch.setattr(ai_settings, "get_options", lambda: opts)
     member = api.get("/api/settings", headers=MEMBER).json()
     assert member == {"ai_provider": "anthropic", "ai_ready": True, "country": "IE", "ha_connected": False}
     admin = api.get("/api/settings", headers=ADMIN)

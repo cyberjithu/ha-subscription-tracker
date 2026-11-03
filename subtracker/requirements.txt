@@ -9,3 +9,4 @@ python-multipart==0.0.33
 pydantic==2.14.2
 anthropic==2.3.0
 openai==3.42.1
+cryptography==50.0.2

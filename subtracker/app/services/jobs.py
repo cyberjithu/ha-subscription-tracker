@@ -5,10 +5,10 @@ from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlmodel import Session
 
-from ..config import get_options
 from ..db import engine
 from . import catalog
 from .ai.providers import get_provider
+from .ai_settings import effective_options
 from .deals import run_auto_deal_searches
 from .discovery import due_countries, run_discovery
 from .notify import flush_pending
@@ -38,22 +38,18 @@ async def flush_job() -> None:
 
 
 async def discovery_job() -> None:
-    opts = get_options()
-    ai = get_provider(opts)
-    if ai is None:
-        return
     with Session(engine) as session:
-        if codes := due_countries(session, [catalog.household_country(session)], opts.discovery_interval_days):
+        opts = effective_options(session)
+        ai = get_provider(opts)
+        if ai and (codes := due_countries(session, [catalog.household_country(session)], opts.discovery_interval_days)):
             log.info("Provider discovery for %s: %s", codes, await run_discovery(session, ai, codes))
 
 
 async def deals_job() -> None:
-    opts = get_options()
-    ai = get_provider(opts)
-    if ai is None:
-        return
     with Session(engine) as session:
-        log.info("Automatic deal searches run: %s", await run_auto_deal_searches(session, ai, opts.deal_search_lead_days))
+        opts = effective_options(session)
+        if ai := get_provider(opts):
+            log.info("Automatic deal searches run: %s", await run_auto_deal_searches(session, ai, opts.deal_search_lead_days))
 
 
 def start() -> None:

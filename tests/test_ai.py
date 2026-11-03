@@ -6,6 +6,7 @@ from pydantic import ValidationError
 
 from app.api import users as users_api
 from app.config import Options
+from app.services import ai_settings
 from app.models import Role, UserProfile
 from app.services.ai.base import AIError, AIRequest, Attachment, ask, extract_json
 from app.services.ai.providers import (AnthropicProvider, HAAITaskProvider, OllamaProvider, OpenAIProvider,
@@ -152,7 +153,7 @@ def api(client, session):
 def test_test_ai_endpoint(api, monkeypatch):
     url, admin = "/api/settings/test-ai", as_user("admin")
     assert api.post(url, headers=as_user("member")).status_code == 403
-    monkeypatch.setattr(users_api, "get_options", lambda: Options())
+    monkeypatch.setattr(ai_settings, "get_options", lambda: Options())
     assert api.post(url, headers=admin).json()["ok"] is False
     monkeypatch.setattr(users_api, "get_provider", lambda opts: FakeAI('{"ok": true, "model": "fake-1"}'))
     r = api.post(url, headers=admin).json()

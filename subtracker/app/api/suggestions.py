@@ -3,11 +3,11 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlmodel import Session, SQLModel, select
 
 from ..auth import admin_only
-from ..config import get_options
 from ..db import engine, get_session
 from ..models import Category, Country, Provider, Suggestion, SuggestionStatus, UserProfile
 from ..services.ai.base import AIError
 from ..services.ai.providers import get_provider
+from ..services.ai_settings import effective_options
 from ..services.ai.schemas import ProviderSuggestion
 from ..services.discovery import discover, run_discovery, slugify
 
@@ -78,18 +78,17 @@ def reject(sid: int, user: UserProfile = Depends(admin_only), session: Session =
 
 
 async def _discover_all(code: str) -> None:
-    ai = get_provider(get_options())
-    if ai:
-        with Session(engine) as session:
+    with Session(engine) as session:
+        if ai := get_provider(effective_options(session)):
             await run_discovery(session, ai, [code])
 
 
 @router.post("/discover")
 async def discover_now(body: DiscoverIn, tasks: BackgroundTasks, _: UserProfile = Depends(admin_only),
                        session: Session = Depends(get_session)) -> dict:
-    ai = get_provider(get_options())
+    ai = get_provider(effective_options(session))
     if ai is None:
-        raise HTTPException(400, "No AI provider is set up. Add one in the add-on configuration.")
+        raise HTTPException(400, "No AI provider is set up. An admin can add one in Settings.")
     country = session.get(Country, body.country)
     if country is None:
         raise HTTPException(404, "Country not found")

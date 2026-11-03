@@ -38,7 +38,11 @@ Assistant sensors or bell notifications, because those are visible to every Home
 | `email_notify_service` | | Or send email through a Home Assistant notify service (e.g. `notify.smtp`) |
 | `install_lovelace_card` | `true` | Copy the dashboard card to `/config/www/subtracker-card.js` on start |
 
-Use **Settings → Test AI connection** in the SubTracker panel to check the key and model.
+The AI provider, model and API key can also be set by an admin in the SubTracker panel under **Settings → AI
+assistant**, without restarting the add-on. Values set there override the add-on configuration. Keys entered in the
+panel are encrypted before they are stored (the encryption key is a separate file in the add-on's private data
+folder), are never shown again (only their last four characters), and are never written to the log.
+Use **Settings → Test AI connection** to check the key and model.
 
 ## Reminders and notifications
 
